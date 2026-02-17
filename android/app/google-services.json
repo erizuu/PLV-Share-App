@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1047270364798",
+    "project_id": "u-share-55820",
+    "storage_bucket": "u-share-55820.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1047270364798:android:fcd0e96e5a7c77c0e66a2f",
+        "android_client_info": {
+          "package_name": "com.ushare.test_proj"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyByphr0RS9Vfu0XWElxDfI4DoVU09gA1UY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
