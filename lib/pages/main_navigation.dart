@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'item_listing_page.dart';
 import 'home_page.dart';
 import 'profile_page.dart' as profile;
+import 'chat_list_page.dart';
 import '../services/request_service.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -554,15 +555,7 @@ class ChatPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFF2C5F7F),
-        title: const Text('Chat', style: TextStyle(color: Colors.white)),
-      ),
-      body: const Center(child: Text('Chat Page - Coming Soon')),
-    );
+    return const ChatListPage();
   }
 }
 

@@ -59,6 +59,7 @@ class ItemService {
     return _firestore
         .collection('items')
         .where('ownerId', isEqualTo: userId)
+        .where('isActive', isEqualTo: true)
         .snapshots();
   }
 
@@ -145,6 +146,26 @@ class ItemService {
       };
     } catch (e) {
       return {'activeLoans': 0, 'totalShares': 0, 'totalItems': 0};
+    }
+  }
+
+  // Update item image
+  Future<Map<String, dynamic>> updateItemImage({
+    required String itemId,
+    required String imageUrl,
+  }) async {
+    try {
+      await _firestore.collection('items').doc(itemId).update({
+        'imageUrl': imageUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return {'success': true, 'message': 'Item image updated successfully'};
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error updating image: ${e.toString()}',
+      };
     }
   }
 }

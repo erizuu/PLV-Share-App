@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/request_service.dart';
+import 'chat_service.dart';
+import 'chat_details_page.dart';
 
 class ItemDetailsPage extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -14,6 +16,7 @@ class ItemDetailsPage extends StatefulWidget {
 
 class _ItemDetailsPageState extends State<ItemDetailsPage> {
   final _requestService = RequestService();
+  final _chatService = ChatService();
   final _auth = FirebaseAuth.instance;
   bool _isRequesting = false;
 
@@ -45,8 +48,41 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
     });
 
     if (result['success']) {
-      _showMessage('Request sent successfully!');
-      Navigator.pop(context);
+      _showMessage('Request sent successfully! Opening chat with lender...');
+
+      // Create or get chat room with lender
+      try {
+        final chatRoomId = await _chatService.getOrCreateChatRoom(
+          otherUserId: widget.item['ownerId'],
+          otherUserName: widget.item['ownerName'],
+          itemId: widget.itemId,
+          itemName: widget.item['itemName'],
+        );
+
+        // Navigate to chat detail page
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatDetailPage(
+                chatRoomId: chatRoomId,
+                otherUserName: widget.item['ownerName'],
+                itemName: widget.item['itemName'],
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        print('Error creating chat room: $e');
+        _showMessage(
+          'Chat created! You can message the lender from your Messages tab.',
+        );
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            Navigator.pop(context);
+          }
+        });
+      }
     } else {
       _showMessage(result['message']);
     }

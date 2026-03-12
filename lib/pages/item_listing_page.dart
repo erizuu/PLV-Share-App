@@ -630,6 +630,50 @@ class _ItemListingPageState extends State<ItemListingPage> {
     );
   }
 
+  Widget _buildCategoryChip(String category, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedCategory = category;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFF6B4A) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFF6B4A) : Colors.grey.shade300,
+            width: 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFFFF6B4A).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+        ),
+        child: Text(
+          category,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isSelected ? Colors.white : Colors.grey.shade600,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildItemCard(
     Map<String, dynamic> item,
     String itemId,
@@ -653,184 +697,277 @@ class _ItemListingPageState extends State<ItemListingPage> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
-              child: item['imageUrl'] != null && item['imageUrl'].isNotEmpty
-                  ? Image.network(
-                      item['imageUrl'],
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 120,
-                          color: Colors.grey.shade200,
-                          child: Icon(
-                            Icons.image_not_supported,
-                            size: 40,
-                            color: Colors.grey.shade400,
-                          ),
-                        );
-                      },
-                    )
-                  : Container(
-                      height: 120,
-                      color: Colors.grey.shade200,
-                      child: Icon(
-                        Icons.inventory_2_outlined,
-                        size: 40,
-                        color: Colors.grey.shade400,
-                      ),
-                    ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image Area - Larger and with better styling
+              Stack(
                 children: [
-                  Text(
-                    item['itemName'] ?? 'Unnamed Item',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF2C3E50),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFF6B4A).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      item['category'] ?? 'Other',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFFFF6B4A),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  if (isMyListing && item['status'] == 'borrowed') ...[
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B4A),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.schedule, size: 10, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text(
-                            'Currently on loan',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
+                    child: Container(
+                      height: 130,
+                      width: double.infinity,
+                      color: Colors.grey.shade100,
+                      child:
+                          item['imageUrl'] != null &&
+                              item['imageUrl'].isNotEmpty
+                          ? Image.network(
+                              item['imageUrl'],
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey.shade200,
+                                  child: Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 48,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                );
+                              },
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      color: Colors.grey.shade200,
+                                      child: const Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                            )
+                          : Container(
+                              color: Colors.grey.shade200,
+                              child: Center(
+                                child: Icon(
+                                  Icons.inventory_2_outlined,
+                                  size: 48,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
                     ),
-                  ],
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.person_outline,
-                        size: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          item['ownerName'] ?? 'Unknown',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade600,
+                  ),
+                  // Delete button (for My Listings)
+                  if (isMyListing)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: () =>
+                            _showDeleteConfirm(itemId, item['itemName']),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade500,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          child: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  // Status badge (On Loan)
+                  if (isMyListing && item['status'] == 'borrowed')
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF6B4A),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.schedule, size: 12, color: Colors.white),
+                            SizedBox(width: 4),
+                            Text(
+                              'On Loan',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                 ],
               ),
-            ),
-          ],
+              // Content Area
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Item Name
+                    Text(
+                      item['itemName'] ?? 'Unnamed Item',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF2C3E50),
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    // Category Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B4A).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        item['category'] ?? 'Other',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFFFF6B4A),
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    // Owner Info
+                    Row(
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2C3E50).withOpacity(0.08),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.person,
+                            size: 12,
+                            color: Color(0xFF2C3E50),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            item['ownerName'] ?? 'Unknown',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildCategoryChip(String label, bool isSelected) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedCategory = label;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF6B4A) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? const Color(0xFFFF6B4A) : Colors.grey.shade300,
-            width: 1,
+  void _showDeleteConfirm(String itemId, String itemName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Item'),
+          content: Text(
+            'Are you sure you want to delete "$itemName"? This action cannot be undone.',
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (label != 'All')
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Icon(
-                  Icons.flash_on,
-                  size: 14,
-                  color: isSelected ? Colors.white : Colors.black,
-                ),
-              ),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black,
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-              ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteItem(itemId, itemName);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
+  }
+
+  Future<void> _deleteItem(String itemId, String itemName) async {
+    try {
+      final result = await _itemService.deleteItem(itemId);
+
+      if (mounted) {
+        String message = result['message'];
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: result['success'] ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting item: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

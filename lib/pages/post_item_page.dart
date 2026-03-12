@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../services/item_service.dart';
+import '../services/image_service.dart';
 
 class PostItemPage extends StatefulWidget {
   const PostItemPage({super.key});
@@ -14,6 +15,7 @@ class _PostItemPageState extends State<PostItemPage> {
   final _itemNameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _itemService = ItemService();
+  final _imageService = ImageService();
   String? _selectedCategory;
   String? _selectedTimeline = 'Today';
   bool _isLoading = false;
@@ -62,27 +64,60 @@ class _PostItemPageState extends State<PostItemPage> {
 
     setState(() => _isLoading = true);
 
-    final result = await _itemService.addItem(
+    // First, create the item without image
+    final itemResult = await _itemService.addItem(
       itemName: _itemNameController.text.trim(),
       category: _selectedCategory!,
       description: _descriptionController.text.trim(),
       timeline: _selectedTimeline ?? 'Today',
     );
 
+    if (!itemResult['success']) {
+      setState(() => _isLoading = false);
+      _showError(itemResult['message']);
+      return;
+    }
+
+    String itemId = itemResult['itemId'];
+    bool imageUploadFailed = false;
+
+    // Now upload image if selected
+    if (_selectedImage != null && _selectedImage!.path != null) {
+      final uploadResult = await _imageService.uploadItemImage(
+        imageFile: File(_selectedImage!.path!),
+        itemId: itemId,
+      );
+
+      if (uploadResult['success']) {
+        // Update item with image URL
+        await _itemService.updateItemImage(
+          itemId: itemId,
+          imageUrl: uploadResult['imageUrl'],
+        );
+      } else {
+        print(
+          'Warning: Image upload failed - ${uploadResult['message']}. Item was created without image.',
+        );
+        imageUploadFailed = true;
+      }
+    }
+
     setState(() => _isLoading = false);
 
-    if (result['success']) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['message']),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context, true); // Return true to indicate item was added
+    if (mounted) {
+      String message = 'Item posted successfully!';
+      if (imageUploadFailed) {
+        message += '\nNote: Image upload failed, but item was created.';
       }
-    } else {
-      _showError(result['message']);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: imageUploadFailed ? Colors.orange : Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      Navigator.pop(context, true);
     }
   }
 
