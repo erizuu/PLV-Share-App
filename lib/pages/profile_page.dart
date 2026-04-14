@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'login_page.dart'; // Import your login page
+import 'login_page.dart';
+import 'profile_settings_page.dart';
+import 'rating_service.dart';
+import 'rating_dialog.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final String? userId; // If null, shows current user's profile
+  final String? userName;
+  final String? userPhotoUrl;
+  final String? ratingType; // 'lender' or 'borrower' for rating context
+  final String? transactionId; // Transaction ID for rating context
+
+  const ProfilePage({
+    super.key,
+    this.userId,
+    this.userName,
+    this.userPhotoUrl,
+    this.ratingType,
+    this.transactionId,
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -13,6 +29,11 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final User? currentUser = FirebaseAuth.instance.currentUser;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final RatingService _ratingService = RatingService();
+
+  late String userId; // The user whose profile we're viewing
+  bool isOwnProfile = false;
+  String _selectedRatingType = 'borrower'; // Toggle for own profile rating view
 
   Map<String, dynamic>? userData;
   int sharedCount = 0;
@@ -21,15 +42,20 @@ class _ProfilePageState extends State<ProfilePage> {
   int successfulExchanges = 0;
   List<String> earnedBadges = [];
   bool isLoading = true;
+  Map<String, dynamic>? lenderRating;
+  Map<String, dynamic>? borrowerRating;
 
   @override
   void initState() {
     super.initState();
+    // Determine which user profile to load
+    userId = widget.userId ?? currentUser?.uid ?? '';
+    isOwnProfile = (widget.userId == null || widget.userId == currentUser?.uid);
     loadUserData();
   }
 
   Future<void> loadUserData() async {
-    if (currentUser == null) {
+    if (userId.isEmpty) {
       setState(() => isLoading = false);
       return;
     }
@@ -38,7 +64,7 @@ class _ProfilePageState extends State<ProfilePage> {
       // Get user profile data from Firestore
       DocumentSnapshot userDoc = await _firestore
           .collection('users')
-          .doc(currentUser!.uid)
+          .doc(userId)
           .get();
 
       if (userDoc.exists) {
@@ -48,20 +74,20 @@ class _ProfilePageState extends State<ProfilePage> {
       // Get items shared count (items where user is lender)
       QuerySnapshot sharedItems = await _firestore
           .collection('items')
-          .where('lenderId', isEqualTo: currentUser!.uid)
+          .where('lenderId', isEqualTo: userId)
           .get();
 
       // Get items borrowed count (transactions where user is borrower and completed)
       QuerySnapshot borrowedTransactions = await _firestore
           .collection('transactions')
-          .where('borrowerId', isEqualTo: currentUser!.uid)
+          .where('borrowerId', isEqualTo: userId)
           .where('status', isEqualTo: 'completed')
           .get();
 
       // Get successful exchanges (completed transactions as lender)
       QuerySnapshot lenderTransactions = await _firestore
           .collection('transactions')
-          .where('lenderId', isEqualTo: currentUser!.uid)
+          .where('lenderId', isEqualTo: userId)
           .where('status', isEqualTo: 'completed')
           .get();
 
@@ -99,7 +125,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (borrowedCount > 0) {
         QuerySnapshot lateReturns = await _firestore
             .collection('transactions')
-            .where('borrowerId', isEqualTo: currentUser!.uid)
+            .where('borrowerId', isEqualTo: userId)
             .where('status', isEqualTo: 'completed')
             .where('isLate', isEqualTo: true)
             .get();
@@ -113,7 +139,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (sharedCount >= 3) {
         QuerySnapshot quickResponses = await _firestore
             .collection('transactions')
-            .where('lenderId', isEqualTo: currentUser!.uid)
+            .where('lenderId', isEqualTo: userId)
             .where('responseTime', isLessThan: 3600) // Responded within 1 hour
             .get();
 
@@ -275,6 +301,54 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   child: Column(
                     children: [
+                      // Settings/Options Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Back button if viewing other user
+                          if (!isOwnProfile)
+                            IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Colors.white,
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                            )
+                          else
+                            const SizedBox(width: 48),
+
+                          // Settings Button (only for own profile)
+                          if (isOwnProfile)
+                            PopupMenuButton(
+                              icon: const Icon(
+                                Icons.more_vert,
+                                color: Colors.white,
+                              ),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  child: const Row(
+                                    children: [
+                                      Icon(Icons.settings, size: 20),
+                                      SizedBox(width: 8),
+                                      Text('Settings'),
+                                    ],
+                                  ),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ProfileSettingsPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            )
+                          else
+                            const SizedBox(width: 48),
+                        ],
+                      ),
                       // Profile Picture
                       Stack(
                         children: [
@@ -284,10 +358,16 @@ class _ProfilePageState extends State<ProfilePage> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 3),
-                              image: currentUser?.photoURL != null
+                              image:
+                                  (isOwnProfile
+                                          ? currentUser?.photoURL
+                                          : widget.userPhotoUrl) !=
+                                      null
                                   ? DecorationImage(
                                       image: NetworkImage(
-                                        currentUser!.photoURL!,
+                                        isOwnProfile
+                                            ? currentUser!.photoURL!
+                                            : widget.userPhotoUrl!,
                                       ),
                                       fit: BoxFit.cover,
                                     )
@@ -298,7 +378,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                       fit: BoxFit.cover,
                                     ),
                             ),
-                            child: currentUser?.photoURL == null
+                            child:
+                                (isOwnProfile
+                                        ? currentUser?.photoURL
+                                        : widget.userPhotoUrl) ==
+                                    null
                                 ? const Icon(
                                     Icons.person,
                                     size: 40,
@@ -567,6 +651,678 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
 
+              // User Ratings Section
+              Padding(
+                padding: EdgeInsets.all(screenWidth * 0.05),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Rating Type Selector for own profile
+                    if (isOwnProfile)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(
+                                    () => _selectedRatingType = 'borrower',
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _selectedRatingType == 'borrower'
+                                        ? const Color(0xFFFF6B4A)
+                                        : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Borrower Ratings',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: _selectedRatingType == 'borrower'
+                                          ? Colors.white
+                                          : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  setState(
+                                    () => _selectedRatingType = 'lender',
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _selectedRatingType == 'lender'
+                                        ? const Color(0xFFFF6B4A)
+                                        : Colors.grey.shade200,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Lender Ratings',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: _selectedRatingType == 'lender'
+                                          ? Colors.white
+                                          : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    // Rating Cards
+                    StreamBuilder<Map<String, dynamic>?>(
+                      stream: _ratingService.watchUserRating(
+                        userId,
+                        isOwnProfile
+                            ? _selectedRatingType
+                            : widget.ratingType ?? 'borrower',
+                      ),
+                      builder: (context, ratingSnap) {
+                        final rating =
+                            ratingSnap.data?['averageRating'] as num? ?? 0.0;
+                        final count =
+                            ratingSnap.data?['totalRatings'] as int? ?? 0;
+                        final ratingTypeLabel =
+                            (isOwnProfile
+                                    ? _selectedRatingType
+                                    : widget.ratingType ?? 'borrower') ==
+                                'lender'
+                            ? 'Lender'
+                            : 'Borrower';
+
+                        return Row(
+                          children: [
+                            // Primary Rating Display
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '${rating.toStringAsFixed(1)}',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF2C3E50),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: List.generate(5, (index) {
+                                        return Icon(
+                                          index < rating.floor()
+                                              ? Icons.star
+                                              : index < rating
+                                              ? Icons.star_half
+                                              : Icons.star_border,
+                                          color: Colors.amber,
+                                          size: 16,
+                                        );
+                                      }),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      ratingTypeLabel,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    Text(
+                                      '($count reviews)',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Rate Button or Show My Rating (only when viewing another user's profile with context)
+              if (!isOwnProfile && widget.ratingType != null)
+                FutureBuilder<Map<String, dynamic>?>(
+                  future: _ratingService.getMyRatingFor(
+                    userId,
+                    widget.ratingType ?? 'borrower',
+                  ),
+                  builder: (context, snapshot) {
+                    final myRating = snapshot.data;
+                    final alreadyRated = myRating != null;
+
+                    if (alreadyRated && myRating != null) {
+                      // Show my existing rating
+                      final rating =
+                          (myRating['rating'] as num?)?.toDouble() ?? 0.0;
+                      final feedback = myRating['feedback'] ?? '';
+
+                      return Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.05,
+                          vertical: screenHeight * 0.02,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFFF6B4A),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Your Rating',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF2C3E50),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.star,
+                                          color: Colors.amber,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          rating.toStringAsFixed(1),
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF2C3E50),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: List.generate(5, (index) {
+                                  return Icon(
+                                    index < rating.floor()
+                                        ? Icons.star
+                                        : index < rating
+                                        ? Icons.star_half
+                                        : Icons.star_border,
+                                    color: Colors.amber,
+                                    size: 16,
+                                  );
+                                }),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                feedback,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade700,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    } else {
+                      // Show rate button
+                      return Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.05,
+                          vertical: screenHeight * 0.02,
+                        ),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              final String ratingTypeToUse =
+                                  widget.ratingType ?? 'borrower';
+                              final String transactionIdToUse =
+                                  widget.transactionId ?? '';
+
+                              showDialog(
+                                context: context,
+                                builder: (context) => RatingDialog(
+                                  ratedUserId: userId,
+                                  ratedUserName:
+                                      widget.userName ?? getFullName(),
+                                  ratingType: ratingTypeToUse,
+                                  transactionId: transactionIdToUse,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.star, color: Colors.white),
+                            label: Text(
+                              'Rate as ${widget.ratingType == 'lender' ? 'Lender' : 'Borrower'}',
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF6B4A),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+
+              // Other Reviews Section
+              if (!isOwnProfile && widget.ratingType != null)
+                FutureBuilder<List<Map<String, dynamic>>>(
+                  future: _ratingService.getUserReviews(
+                    userId,
+                    widget.ratingType ?? 'borrower',
+                  ),
+                  builder: (context, snapshot) {
+                    final allReviews = snapshot.data ?? [];
+                    // Get reviews from other users (not current user)
+                    final currentUserId =
+                        FirebaseAuth.instance.currentUser?.uid;
+                    final otherReviews = allReviews
+                        .where((review) => review['ratedBy'] != currentUserId)
+                        .toList();
+
+                    if (otherReviews.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: screenWidth * 0.05,
+                        vertical: screenHeight * 0.02,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Other Reviews (${otherReviews.length})',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2C3E50),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: otherReviews.length > 2
+                                ? 2
+                                : otherReviews.length,
+                            itemBuilder: (context, index) {
+                              final review = otherReviews[index];
+                              final rating =
+                                  (review['rating'] as num?)?.toDouble() ?? 0.0;
+                              final feedback = review['feedback'] ?? '';
+                              final raterName =
+                                  review['ratedByName'] ?? 'Anonymous';
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            raterName,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF2C3E50),
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        Row(
+                                          children: List.generate(5, (i) {
+                                            return Icon(
+                                              i < rating.floor()
+                                                  ? Icons.star
+                                                  : i < rating
+                                                  ? Icons.star_half
+                                                  : Icons.star_border,
+                                              color: Colors.amber,
+                                              size: 14,
+                                            );
+                                          }),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      feedback,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade700,
+                                        height: 1.4,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                          if (otherReviews.length > 2)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: TextButton(
+                                onPressed: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(20),
+                                      ),
+                                    ),
+                                    builder: (context) {
+                                      return DraggableScrollableSheet(
+                                        expand: false,
+                                        builder: (context, scrollController) {
+                                          return Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Padding(
+                                                padding: const EdgeInsets.all(
+                                                  16,
+                                                ),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      'All Reviews (${otherReviews.length})',
+                                                      style: const TextStyle(
+                                                        fontSize: 18,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    IconButton(
+                                                      icon: const Icon(
+                                                        Icons.close,
+                                                      ),
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                            context,
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: ListView.builder(
+                                                  controller: scrollController,
+                                                  padding: const EdgeInsets.all(
+                                                    16,
+                                                  ),
+                                                  itemCount:
+                                                      otherReviews.length,
+                                                  itemBuilder: (context, index) {
+                                                    final review =
+                                                        otherReviews[index];
+                                                    final rating =
+                                                        (review['rating']
+                                                                as num?)
+                                                            ?.toDouble() ??
+                                                        0.0;
+                                                    final feedback =
+                                                        review['feedback'] ??
+                                                        '';
+                                                    final raterName =
+                                                        review['ratedByName'] ??
+                                                        'Anonymous';
+
+                                                    return Container(
+                                                      margin:
+                                                          const EdgeInsets.only(
+                                                            bottom: 12,
+                                                          ),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            12,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                        border: Border.all(
+                                                          color: Colors
+                                                              .grey
+                                                              .shade200,
+                                                          width: 1,
+                                                        ),
+                                                      ),
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Row(
+                                                            mainAxisAlignment:
+                                                                MainAxisAlignment
+                                                                    .spaceBetween,
+                                                            children: [
+                                                              Text(
+                                                                raterName,
+                                                                style: const TextStyle(
+                                                                  fontSize: 14,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                ),
+                                                              ),
+                                                              Container(
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          8,
+                                                                      vertical:
+                                                                          4,
+                                                                    ),
+                                                                decoration: BoxDecoration(
+                                                                  color: Colors
+                                                                      .amber
+                                                                      .withOpacity(
+                                                                        0.2,
+                                                                      ),
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        6,
+                                                                      ),
+                                                                ),
+                                                                child: Row(
+                                                                  mainAxisSize:
+                                                                      MainAxisSize
+                                                                          .min,
+                                                                  children: [
+                                                                    const Icon(
+                                                                      Icons
+                                                                          .star,
+                                                                      color: Colors
+                                                                          .amber,
+                                                                      size: 14,
+                                                                    ),
+                                                                    const SizedBox(
+                                                                      width: 4,
+                                                                    ),
+                                                                    Text(
+                                                                      rating
+                                                                          .toStringAsFixed(
+                                                                            1,
+                                                                          ),
+                                                                      style: const TextStyle(
+                                                                        fontSize:
+                                                                            12,
+                                                                        fontWeight:
+                                                                            FontWeight.w600,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 8,
+                                                          ),
+                                                          Row(
+                                                            children: List.generate(5, (
+                                                              i,
+                                                            ) {
+                                                              return Icon(
+                                                                i <
+                                                                        rating
+                                                                            .floor()
+                                                                    ? Icons.star
+                                                                    : i < rating
+                                                                    ? Icons
+                                                                          .star_half
+                                                                    : Icons
+                                                                          .star_border,
+                                                                color: Colors
+                                                                    .amber,
+                                                                size: 16,
+                                                              );
+                                                            }),
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 8,
+                                                          ),
+                                                          Text(
+                                                            feedback,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              color: Colors
+                                                                  .grey
+                                                                  .shade800,
+                                                              height: 1.5,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
+                                child: Text(
+                                  'View all ${otherReviews.length} reviews',
+                                  style: const TextStyle(
+                                    color: Color(0xFFFF6B4A),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+
               // Earned Badges Section
               if (earnedBadges.isNotEmpty)
                 Padding(
@@ -657,26 +1413,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                 ),
-
-              SizedBox(height: screenHeight * 0.03),
-
-              // Logout Button
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-                child: ElevatedButton.icon(
-                  onPressed: _logout,
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                  label: const Text('Logout'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.shade400,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
 
               SizedBox(height: screenHeight * 0.03),
             ],

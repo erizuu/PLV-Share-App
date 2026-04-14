@@ -70,15 +70,19 @@ class RequestService {
         .snapshots();
   }
 
-  // Accept a request
+  // Accept a request with optional transaction end date
   Future<Map<String, dynamic>> acceptRequest(
     String requestId,
-    String itemId,
-  ) async {
+    String itemId, {
+    DateTime? transactionEndDate,
+  }) async {
     try {
       // Update request status
       await _firestore.collection('requests').doc(requestId).update({
         'status': 'accepted',
+        'transactionEndDate': transactionEndDate != null
+            ? Timestamp.fromDate(transactionEndDate)
+            : null,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -110,6 +114,56 @@ class RequestService {
       return {
         'success': false,
         'message': 'Error declining request: ${e.toString()}',
+      };
+    }
+  }
+
+  // Cancel a request (borrower cancels their own request)
+  Future<Map<String, dynamic>> cancelRequest(String requestId) async {
+    try {
+      await _firestore.collection('requests').doc(requestId).update({
+        'status': 'cancelled',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return {'success': true, 'message': 'Request cancelled'};
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error cancelling request: ${e.toString()}',
+      };
+    }
+  }
+
+  // Get request details
+  Future<Map<String, dynamic>?> getRequest(String requestId) async {
+    try {
+      final doc = await _firestore.collection('requests').doc(requestId).get();
+      if (!doc.exists) return null;
+
+      final data = doc.data() as Map<String, dynamic>;
+      return {...data, 'id': doc.id};
+    } catch (e) {
+      print('Error getting request: $e');
+      return null;
+    }
+  }
+
+  // End transaction and update related chat room
+  Future<Map<String, dynamic>> endTransaction(String requestId) async {
+    try {
+      // Update request status to completed
+      await _firestore.collection('requests').doc(requestId).update({
+        'status': 'completed',
+        'completedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      return {'success': true, 'message': 'Transaction ended'};
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Error ending transaction: ${e.toString()}',
       };
     }
   }

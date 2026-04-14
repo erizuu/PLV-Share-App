@@ -19,6 +19,22 @@ class _ChatListPageState extends State<ChatListPage> {
   void initState() {
     super.initState();
     _chatService.cleanupOldChats(); // Clean up old chats on load
+    _checkAllChatsForOverdue(); // Check for overdue items
+  }
+
+  Future<void> _checkAllChatsForOverdue() async {
+    try {
+      // Get all chat rooms and check for overdue items
+      // This will trigger notifications if any items are overdue
+      final chatRooms = await _chatService.getChatRooms().first;
+      for (final chatRoom in chatRooms) {
+        if (chatRoom.transactionEndDate != null) {
+          await _chatService.checkAndNotifyDeadline(chatRoom.id);
+        }
+      }
+    } catch (e) {
+      print('Error checking for overdue items: $e');
+    }
   }
 
   String _getTimeAgo(DateTime? time) {
@@ -36,19 +52,6 @@ class _ChatListPageState extends State<ChatListPage> {
     } else {
       return 'Just now';
     }
-  }
-
-  String _getOtherUserName(ChatRoom chatRoom) {
-    if (_currentUser == null) return 'Unknown';
-
-    String otherUserId = chatRoom.participants.firstWhere(
-      (id) => id != _currentUser.uid,
-      orElse: () => '',
-    );
-
-    // In a real app, you'd fetch the name from users collection
-    // For now, we'll just return a placeholder
-    return otherUserId == 'sam123' ? 'Sam L.' : 'Marcus R.';
   }
 
   @override
@@ -77,14 +80,28 @@ class _ChatListPageState extends State<ChatListPage> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             color: const Color(0xFFFFF3E0),
-            child: const Text(
-              'CHATS ARE CLEARED 7 DAYS AFTER TRANSACTIONS END',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2C3E50),
-              ),
-              textAlign: TextAlign.center,
+            child: const Column(
+              children: [
+                Text(
+                  '📦 RETURN DEADLINE: Check your borrowed items\' due dates',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2C3E50),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Chats are cleared 7 days after the return deadline',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF8C3E50),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
 
@@ -153,11 +170,14 @@ class _ChatListPageState extends State<ChatListPage> {
                   itemCount: snapshot.data!.length,
                   itemBuilder: (context, index) {
                     final chatRoom = snapshot.data![index];
-                    final otherUserName = _getOtherUserName(chatRoom);
+                    final otherUserName = chatRoom.otherUserName ?? 'Unknown';
                     final daysLeft = _chatService.getDaysLeft(
                       chatRoom.transactionEndDate,
                     );
                     final isEnded = chatRoom.status == 'transaction_ended';
+                    final isOverdue =
+                        chatRoom.transactionEndDate != null &&
+                        DateTime.now().isAfter(chatRoom.transactionEndDate!);
 
                     return InkWell(
                       onTap: () {
@@ -185,24 +205,61 @@ class _ChatListPageState extends State<ChatListPage> {
                         ),
                         child: Row(
                           children: [
-                            // Avatar
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF2C3E50).withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  otherUserName[0],
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF2C3E50),
+                            // Avatar with unread badge
+                            Stack(
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF2C3E50,
+                                    ).withOpacity(0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      otherUserName[0],
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF2C3E50),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                                // Unread badge
+                                FutureBuilder<int>(
+                                  future: _chatService.getUnreadMessageCount(
+                                    chatRoom.id,
+                                  ),
+                                  builder: (context, snapshot) {
+                                    if (snapshot.hasData &&
+                                        snapshot.data! > 0) {
+                                      return Positioned(
+                                        right: 0,
+                                        top: 0,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFFF6B4A),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Text(
+                                            snapshot.data.toString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                    return const SizedBox.shrink();
+                                  },
+                                ),
+                              ],
                             ),
                             const SizedBox(width: 12),
 
@@ -260,46 +317,89 @@ class _ChatListPageState extends State<ChatListPage> {
                                         const SizedBox(width: 4),
                                       if (chatRoom.lastMessage != null)
                                         Expanded(
-                                          child: Text(
-                                            chatRoom.lastMessage!,
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                          child: FutureBuilder<int>(
+                                            future: _chatService
+                                                .getUnreadMessageCount(
+                                                  chatRoom.id,
+                                                ),
+                                            builder: (context, snapshot) {
+                                              final hasUnread =
+                                                  snapshot.hasData &&
+                                                  snapshot.data! > 0;
+                                              return Text(
+                                                chatRoom.lastMessage!,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: hasUnread
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                                  color: hasUnread
+                                                      ? Colors.grey.shade800
+                                                      : Colors.grey.shade600,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              );
+                                            },
                                           ),
                                         ),
                                     ],
                                   ),
                                   const SizedBox(height: 4),
-                                  // Status indicator
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: isEnded
-                                          ? Colors.grey.shade200
-                                          : const Color(
-                                              0xFFFF6B4A,
-                                            ).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      isEnded
-                                          ? 'TRANSACTION ENDED'
-                                          : '$daysLeft DAYS LEFT',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
+                                  // Status indicator with overdue badge
+                                  if (isOverdue)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFFF5252,
+                                        ).withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFFFF5252,
+                                          ).withOpacity(0.3),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        '⚠️ OVERDUE FOR RETURN',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFFD32F2F),
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
                                         color: isEnded
-                                            ? Colors.grey.shade600
-                                            : const Color(0xFFFF6B4A),
+                                            ? Colors.grey.shade200
+                                            : const Color(
+                                                0xFFFF6B4A,
+                                              ).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        isEnded
+                                            ? 'TRANSACTION ENDED'
+                                            : '$daysLeft DAYS LEFT',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: isEnded
+                                              ? Colors.grey.shade600
+                                              : const Color(0xFFFF6B4A),
+                                        ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),

@@ -1,12 +1,45 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'basic_information_page.dart';
 import 'login_page.dart';
+import 'main_navigation.dart';
 
-class LandingPage extends StatelessWidget {
+class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
 
   @override
+  State<LandingPage> createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  @override
+  void initState() {
+    super.initState();
+    _checkUserLoggedIn();
+  }
+
+  void _checkUserLoggedIn() {
+    // Check if user is already logged in
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      // User is already logged in, navigate to MainNavigation
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacementNamed('/home');
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // If user is logged in, return an empty scaffold while redirecting
+    if (FirebaseAuth.instance.currentUser != null) {
+      return const Scaffold(
+        body: SizedBox.expand(
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 

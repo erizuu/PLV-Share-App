@@ -10,6 +10,10 @@ class ChatRoom {
   final String? transactionId;
   final DateTime? transactionEndDate;
   final String status; // 'active', 'transaction_ended', 'archived'
+  final String? otherUserName;
+  final List<String> finishedBy; // Track which users confirmed finishing
+  final String?
+  lenderId; // ID of the user who accepted the request (item owner)
 
   ChatRoom({
     required this.id,
@@ -21,6 +25,9 @@ class ChatRoom {
     this.transactionId,
     this.transactionEndDate,
     required this.status,
+    this.otherUserName,
+    this.finishedBy = const [],
+    this.lenderId,
   });
 
   factory ChatRoom.fromFirestore(DocumentSnapshot doc) {
@@ -35,6 +42,9 @@ class ChatRoom {
       transactionId: data['transactionId'],
       transactionEndDate: (data['transactionEndDate'] as Timestamp?)?.toDate(),
       status: data['status'] ?? 'active',
+      otherUserName: data['otherUserName'],
+      finishedBy: List<String>.from(data['finishedBy'] ?? []),
+      lenderId: data['lenderId'],
     );
   }
 }
@@ -46,6 +56,7 @@ class ChatMessage {
   final String message;
   final DateTime timestamp;
   final bool isSystemMessage;
+  final bool isRead;
 
   ChatMessage({
     required this.id,
@@ -54,6 +65,7 @@ class ChatMessage {
     required this.message,
     required this.timestamp,
     this.isSystemMessage = false,
+    this.isRead = false,
   });
 
   factory ChatMessage.fromFirestore(DocumentSnapshot doc) {
@@ -65,6 +77,7 @@ class ChatMessage {
       message: data['message'] ?? '',
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isSystemMessage: data['isSystemMessage'] ?? false,
+      isRead: data['isRead'] ?? false,
     );
   }
 
@@ -75,6 +88,7 @@ class ChatMessage {
       'message': message,
       'timestamp': Timestamp.fromDate(timestamp),
       'isSystemMessage': isSystemMessage,
+      'isRead': isRead,
     };
   }
 }

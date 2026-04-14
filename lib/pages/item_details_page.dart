@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/request_service.dart';
 import 'chat_service.dart';
 import 'chat_details_page.dart';
+import 'profile_page.dart';
 
 class ItemDetailsPage extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -57,6 +58,7 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
           otherUserName: widget.item['ownerName'],
           itemId: widget.itemId,
           itemName: widget.item['itemName'],
+          lenderId: widget.item['ownerId'] ?? '',
         );
 
         // Navigate to chat detail page
@@ -191,44 +193,60 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                         ),
                       ],
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2C3E50).withOpacity(0.1),
-                            shape: BoxShape.circle,
+                    child: GestureDetector(
+                      onTap: () {
+                        // Navigate to owner's profile (see lender rating)
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProfilePage(
+                              userId: widget.item['ownerId'],
+                              userName: widget.item['ownerName'],
+                              ratingType: 'lender',
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.person,
-                            color: Color(0xFF2C3E50),
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2C3E50).withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.person,
+                              color: Color(0xFF2C3E50),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.item['ownerName'] ?? 'Unknown',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF2C3E50),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.item['ownerName'] ?? 'Unknown',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2C3E50),
+                                    decoration: TextDecoration.underline,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                widget.item['ownerSchoolId'] ?? '',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
+                                Text(
+                                  widget.item['ownerSchoolId'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
 

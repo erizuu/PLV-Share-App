@@ -145,7 +145,7 @@ class _IdentityVerificationPageState extends State<IdentityVerificationPage> {
                   ),
                   SizedBox(height: screenHeight * 0.01),
                   DropdownButtonFormField<String>(
-                    value: _selectedVerification,
+                    initialValue: _selectedVerification,
                     decoration: InputDecoration(
                       hintText: 'School ID',
                       hintStyle: const TextStyle(color: Color(0xFFBDC3C7)),

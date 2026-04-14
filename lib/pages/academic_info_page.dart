@@ -177,7 +177,7 @@ class _AcademicInfoPageState extends State<AcademicInfoPage> {
                   ),
                   SizedBox(height: screenHeight * 0.01),
                   DropdownButtonFormField<String>(
-                    value: _selectedCourse,
+                    initialValue: _selectedCourse,
                     decoration: InputDecoration(
                       hintText: 'Select Course',
                       hintStyle: const TextStyle(color: Color(0xFFBDC3C7)),
@@ -218,7 +218,7 @@ class _AcademicInfoPageState extends State<AcademicInfoPage> {
                   ),
                   SizedBox(height: screenHeight * 0.01),
                   DropdownButtonFormField<String>(
-                    value: _selectedSection,
+                    initialValue: _selectedSection,
                     decoration: InputDecoration(
                       hintText: 'Select Section',
                       hintStyle: const TextStyle(color: Color(0xFFBDC3C7)),

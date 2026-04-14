@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:plv_share/firebase_options.dart';
 import 'pages/landing_page.dart';
+import 'pages/main_navigation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +23,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const LandingPage(),
+      routes: {'/home': (context) => const MainNavigation()},
     );
   }
 }

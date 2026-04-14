@@ -38,8 +38,8 @@ service cloud.firestore {
     // Requests collection
     match /requests/{requestId} {
       allow read: if request.auth.uid != null;
-      allow create: if request.auth.uid != null && request.resource.data.requesterId == request.auth.uid;
-      allow update: if request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.requesterId;
+      allow create: if request.auth.uid != null && request.resource.data.borrowerId == request.auth.uid;
+      allow update: if request.auth.uid == resource.data.ownerId || request.auth.uid == resource.data.borrowerId;
     }
 
     // Transactions collection
@@ -47,6 +47,22 @@ service cloud.firestore {
       allow read: if request.auth.uid in resource.data.participants;
       allow create: if request.auth.uid != null;
       allow update: if request.auth.uid in resource.data.participants;
+    }
+
+    // Ratings subcollection under users
+    // Using ratingsMap structure where ratings are keyed by rater user ID
+    match /users/{userId}/ratings/{ratingType} {
+      // Allow reading ratings of any user (so we can see reviews)
+      allow read: if request.auth.uid != null;
+      
+      // Allow creating new rating documents
+      allow create: if request.auth.uid != null;
+      
+      // Allow updating ratings documents (users can add their ratings)
+      allow update: if request.auth.uid != null;
+      
+      // Allow deleting (admin only, but open for now)
+      allow delete: if request.auth.uid != null;
     }
 
     // Deny all other access
