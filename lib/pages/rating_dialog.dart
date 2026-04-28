@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/responsive_utils.dart';
 import 'rating_service.dart';
 
 class RatingDialog extends StatefulWidget {
@@ -23,7 +24,32 @@ class _RatingDialogState extends State<RatingDialog> {
   double rating = 5.0;
   TextEditingController feedbackController = TextEditingController();
   bool isSubmitting = false;
+  bool _isEditing = false;
   final RatingService _ratingService = RatingService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExistingReview();
+  }
+
+  Future<void> _loadExistingReview() async {
+    try {
+      final existing = await _ratingService.getMyRatingFor(
+        widget.ratedUserId,
+        widget.ratingType,
+      );
+      if (existing != null) {
+        setState(() {
+          _isEditing = true;
+          rating = (existing['rating'] as num?)?.toDouble() ?? rating;
+          feedbackController.text = existing['feedback'] ?? '';
+        });
+      }
+    } catch (e) {
+      print('Error loading existing review: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -57,19 +83,21 @@ class _RatingDialogState extends State<RatingDialog> {
         if (success) {
           Navigator.pop(context, true);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Rating submitted successfully! 🎉'),
-              duration: Duration(seconds: 2),
+            SnackBar(
+              content: Text(
+                _isEditing
+                    ? 'Rating updated! ✅'
+                    : 'Rating submitted successfully! 🎉',
+              ),
+              duration: const Duration(seconds: 2),
               backgroundColor: Colors.green,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                'You have already rated this user as a ${widget.ratingType == 'lender' ? 'Lender' : 'Borrower'}. You can only rate them once per role.',
-              ),
-              duration: const Duration(seconds: 4),
+              content: Text('Error submitting rating. Please try again.'),
+              duration: const Duration(seconds: 3),
               backgroundColor: Colors.orange,
             ),
           );
@@ -213,7 +241,7 @@ class _RatingDialogState extends State<RatingDialog> {
                     strokeWidth: 2,
                   ),
                 )
-              : const Text('Submit Rating'),
+              : Text(_isEditing ? 'Update Rating' : 'Submit Rating'),
         ),
       ],
     );

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'post_item_page.dart';
 import 'item_details_page.dart';
 import '../services/item_service.dart';
+import '../utils/responsive_utils.dart';
 
 class ItemListingPage extends StatefulWidget {
   const ItemListingPage({super.key});
@@ -20,6 +21,11 @@ class _ItemListingPageState extends State<ItemListingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final horizontalPadding = ResponsiveUtils.getResponsiveHorizontalPadding(screenWidth);
+    final headerHeight = ResponsiveUtils.isTablet(context) ? 180 : 160;
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
@@ -30,7 +36,7 @@ class _ItemListingPageState extends State<ItemListingPage> {
               children: [
                 // Header with rounded bottom
                 Container(
-                  height: 160,
+                  height: headerHeight.toDouble(),
                   decoration: const BoxDecoration(
                     color: Color(0xFF2C3E50),
                     borderRadius: BorderRadius.only(
@@ -41,17 +47,17 @@ class _ItemListingPageState extends State<ItemListingPage> {
                   child: Stack(
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 40, 20, 20),
+                        padding: EdgeInsets.fromLTRB(horizontalPadding, 40, horizontalPadding, 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Item Listing',
                                   style: TextStyle(
-                                    fontSize: 28,
+                                    fontSize: ResponsiveUtils.getResponsiveFontSize(28, screenWidth, minSize: 24, maxSize: 36),
                                     fontWeight: FontWeight.bold,
                                     color: Colors.white,
                                   ),
@@ -84,7 +90,7 @@ class _ItemListingPageState extends State<ItemListingPage> {
                                       'Browse All',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        fontSize: 16,
+                                        fontSize: ResponsiveUtils.getResponsiveFontSize(16, screenWidth, minSize: 14, maxSize: 20),
                                         fontWeight: _isBrowseAll
                                             ? FontWeight.w600
                                             : FontWeight.w400,
@@ -95,7 +101,7 @@ class _ItemListingPageState extends State<ItemListingPage> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 40),
+                                SizedBox(width: ResponsiveUtils.getResponsiveValue(40, screenWidth, minValue: 30, maxValue: 50)),
                                 Expanded(
                                   child: GestureDetector(
                                     onTap: () {
@@ -107,7 +113,7 @@ class _ItemListingPageState extends State<ItemListingPage> {
                                       'My Listing',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
-                                        fontSize: 16,
+                                        fontSize: ResponsiveUtils.getResponsiveFontSize(16, screenWidth, minSize: 14, maxSize: 20),
                                         fontWeight: !_isBrowseAll
                                             ? FontWeight.w600
                                             : FontWeight.w400,
@@ -129,7 +135,7 @@ class _ItemListingPageState extends State<ItemListingPage> {
                         left: 0,
                         right: 0,
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                           child: Row(
                             children: [
                               Expanded(
@@ -143,7 +149,7 @@ class _ItemListingPageState extends State<ItemListingPage> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 40),
+                              SizedBox(width: ResponsiveUtils.getResponsiveValue(40, screenWidth, minValue: 30, maxValue: 50)),
                               Expanded(
                                 child: Container(
                                   height: 3,
@@ -305,12 +311,17 @@ class _ItemListingPageState extends State<ItemListingPage> {
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
+              padding: EdgeInsets.fromLTRB(
+                ResponsiveUtils.getResponsiveHorizontalPadding(MediaQuery.of(context).size.width),
+                0,
+                ResponsiveUtils.getResponsiveHorizontalPadding(MediaQuery.of(context).size.width),
+                20,
+              ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: ResponsiveUtils.getGridColumns(MediaQuery.of(context).size.width),
                 childAspectRatio: 0.75,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
+                crossAxisSpacing: ResponsiveUtils.getResponsiveGridSpacing(MediaQuery.of(context).size.width),
+                mainAxisSpacing: ResponsiveUtils.getResponsiveGridSpacing(MediaQuery.of(context).size.width),
               ),
               itemCount: snapshot.data!.docs.length,
               itemBuilder: (context, index) {
@@ -549,12 +560,17 @@ class _ItemListingPageState extends State<ItemListingPage> {
               // Show items in grid
               final items = snapshot.data!.docs;
               return GridView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
+                padding: EdgeInsets.fromLTRB(
+                  ResponsiveUtils.getResponsiveHorizontalPadding(MediaQuery.of(context).size.width),
+                  0,
+                  ResponsiveUtils.getResponsiveHorizontalPadding(MediaQuery.of(context).size.width),
+                  20,
+                ),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: ResponsiveUtils.getGridColumns(MediaQuery.of(context).size.width),
                   childAspectRatio: 0.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
+                  crossAxisSpacing: ResponsiveUtils.getResponsiveGridSpacing(MediaQuery.of(context).size.width),
+                  mainAxisSpacing: ResponsiveUtils.getResponsiveGridSpacing(MediaQuery.of(context).size.width),
                 ),
                 itemCount: items.length + 1, // +1 for "Add New Listing" card
                 itemBuilder: (context, index) {

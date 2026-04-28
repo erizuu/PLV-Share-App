@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'item_details_page.dart';
 import '../services/item_service.dart';
+import '../utils/responsive_utils.dart';
 
 class UShapeClipper extends CustomClipper<Path> {
   @override
@@ -40,6 +41,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final horizontalPadding = ResponsiveUtils.getResponsiveHorizontalPadding(screenWidth);
+    final headerHeight = ResponsiveUtils.isTablet(context) ? 180 : 160;
+    
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
@@ -50,7 +56,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 // Header with rounded bottom
                 Container(
-                  height: 160,
+                  height: headerHeight.toDouble(),
                   decoration: const BoxDecoration(
                     color: Color(0xFF2C3E50),
                     borderRadius: BorderRadius.only(
@@ -58,26 +64,26 @@ class _HomePageState extends State<HomePage> {
                       bottomRight: Radius.circular(24),
                     ),
                   ),
-                  padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
+                  padding: EdgeInsets.fromLTRB(horizontalPadding, 40, horizontalPadding, 40),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'U-Share',
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: ResponsiveUtils.getResponsiveFontSize(28, screenWidth, minSize: 24, maxSize: 36),
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: ResponsiveUtils.getResponsiveValue(14, screenWidth, minValue: 10, maxValue: 18),
+                              vertical: ResponsiveUtils.getResponsiveValue(8, screenWidth, minValue: 6, maxValue: 10),
                             ),
                             decoration: BoxDecoration(
                               border: Border.all(
@@ -97,11 +103,11 @@ class _HomePageState extends State<HomePage> {
                                     color: Color(0xFF4ADE80),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                const Text(
+                                SizedBox(width: ResponsiveUtils.getResponsiveValue(8, screenWidth, minValue: 6, maxValue: 10)),
+                                Text(
                                   'INSIDE CAMPUS',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: ResponsiveUtils.getResponsiveFontSize(12, screenWidth, minSize: 10, maxSize: 14),
                                     color: Colors.white,
                                     fontWeight: FontWeight.w600,
                                     letterSpacing: 0.5,
@@ -112,10 +118,13 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
+                      SizedBox(height: ResponsiveUtils.getResponsiveValue(4, screenWidth)),
+                      Text(
                         'Campus only item sharing',
-                        style: TextStyle(fontSize: 14, color: Colors.white70),
+                        style: TextStyle(
+                          fontSize: ResponsiveUtils.getResponsiveFontSize(14, screenWidth, minSize: 11, maxSize: 16),
+                          color: Colors.white70,
+                        ),
                       ),
                     ],
                   ),
@@ -127,199 +136,36 @@ class _HomePageState extends State<HomePage> {
                     color: const Color(0xFFF8F9FA),
                     child: SingleChildScrollView(
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 40, 20, 20),
+                        padding: EdgeInsets.fromLTRB(horizontalPadding, 40, horizontalPadding, 20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // ASAP Cards Row
-                            Row(
-                              children: [
-                                // ASAP Borrowing Card
-                                Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(
-                                          width: 56,
-                                          height: 56,
-                                          child: Center(
-                                            child: Image.asset(
-                                              'images/asap.png',
-                                              width: 56,
-                                              height: 56,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Text(
-                                          'ASAP Borrowing',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        const Text(
-                                          'Find students with the item you need',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            height: 1.3,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: ElevatedButton(
-                                            onPressed: () {},
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(
-                                                0xFF2C3E50,
-                                              ),
-                                              foregroundColor: Colors.white,
-                                              elevation: 0,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 10,
-                                                  ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'Start Scanning',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                            // ASAP Cards Row - Use responsive columns on tablet
+                            ResponsiveUtils.isTablet(context)
+                                ? _buildTabletASAPCards(screenWidth)
+                                : _buildPhoneASAPCards(),
 
-                                const SizedBox(width: 12),
-
-                                // Help a Peer ASAP Card
-                                Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        SizedBox(
-                                          width: 56,
-                                          height: 56,
-                                          child: Center(
-                                            child: Image.asset(
-                                              'images/help.png',
-                                              width: 56,
-                                              height: 56,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Text(
-                                          'Help a Peer ASAP',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        const Text(
-                                          'Respond to nearby borrowing requests',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: Color(0xFF7F8C8D),
-                                            height: 1.3,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        SizedBox(
-                                          width: double.infinity,
-                                          child: ElevatedButton(
-                                            onPressed: () {},
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(
-                                                0xFFFF6B4A,
-                                              ),
-                                              foregroundColor: Colors.white,
-                                              elevation: 0,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    vertical: 10,
-                                                  ),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                            ),
-                                            child: const Text(
-                                              'Start Scanning',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 24),
+                            SizedBox(height: ResponsiveUtils.getResponsiveValue(24, screenWidth, minValue: 16, maxValue: 32)),
 
                             // Campus Marketplace Section
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
+                                Text(
                                   'Campus Marketplace',
                                   style: TextStyle(
-                                    fontSize: 20,
+                                    fontSize: ResponsiveUtils.getResponsiveFontSize(20, screenWidth, minSize: 16, maxSize: 28),
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF2C3E50),
+                                    color: const Color(0xFF2C3E50),
                                   ),
                                 ),
                                 TextButton(
                                   onPressed: () {},
-                                  child: const Text(
+                                  child: Text(
                                     'See All',
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      color: Color(0xFFFF6B4A),
+                                      fontSize: ResponsiveUtils.getResponsiveFontSize(14, screenWidth, minSize: 12, maxSize: 16),
+                                      color: const Color(0xFFFF6B4A),
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -327,7 +173,7 @@ class _HomePageState extends State<HomePage> {
                               ],
                             ),
 
-                            const SizedBox(height: 12),
+                            SizedBox(height: ResponsiveUtils.getResponsiveValue(12, screenWidth)),
 
                             // Marketplace Items
                             StreamBuilder<QuerySnapshot>(
@@ -367,13 +213,12 @@ class _HomePageState extends State<HomePage> {
                                 return GridView.builder(
                                   shrinkWrap: true,
                                   physics: const NeverScrollableScrollPhysics(),
-                                  gridDelegate:
-                                      const SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 2,
-                                        childAspectRatio: 0.75,
-                                        crossAxisSpacing: 12,
-                                        mainAxisSpacing: 12,
-                                      ),
+                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: ResponsiveUtils.getGridColumns(screenWidth),
+                                    childAspectRatio: 0.75,
+                                    crossAxisSpacing: ResponsiveUtils.getResponsiveGridSpacing(screenWidth),
+                                    mainAxisSpacing: ResponsiveUtils.getResponsiveGridSpacing(screenWidth),
+                                  ),
                                   itemCount: items.length,
                                   itemBuilder: (context, index) {
                                     var doc = items[index];
@@ -385,7 +230,7 @@ class _HomePageState extends State<HomePage> {
                               },
                             ),
 
-                            const SizedBox(height: 20),
+                            SizedBox(height: ResponsiveUtils.getResponsiveValue(20, screenWidth)),
                           ],
                         ),
                       ),
@@ -397,11 +242,11 @@ class _HomePageState extends State<HomePage> {
 
             // Overlapping Post a Request Button
             Positioned(
-              top: 130,
-              left: 20,
-              right: 20,
+              top: headerHeight.toDouble() - 28,
+              left: horizontalPadding,
+              right: horizontalPadding,
               child: SizedBox(
-                height: 56,
+                height: ResponsiveUtils.getResponsiveButtonHeight(screenHeight),
                 child: ElevatedButton(
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
@@ -413,15 +258,15 @@ class _HomePageState extends State<HomePage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_circle_outline, size: 24),
-                      SizedBox(width: 8),
+                      const Icon(Icons.add_circle_outline, size: 24),
+                      SizedBox(width: ResponsiveUtils.getResponsiveValue(8, screenWidth)),
                       Text(
                         'Post a Request',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: ResponsiveUtils.getResponsiveFontSize(18, screenWidth, minSize: 14, maxSize: 22),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -432,6 +277,148 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPhoneASAPCards() {
+    return Row(
+      children: [
+        // ASAP Borrowing Card
+        Expanded(
+          child: _buildASAPCard(
+            title: 'ASAP Borrowing',
+            description: 'Find students with the item you need',
+            imagePath: 'images/asap.png',
+            buttonColor: const Color(0xFF2C3E50),
+            onTap: () {},
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Help a Peer ASAP Card
+        Expanded(
+          child: _buildASAPCard(
+            title: 'Help a Peer ASAP',
+            description: 'Respond to nearby borrowing requests',
+            imagePath: 'images/help.png',
+            buttonColor: const Color(0xFFFF6B4A),
+            onTap: () {},
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabletASAPCards(double screenWidth) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            // ASAP Borrowing Card
+            Expanded(
+              child: _buildASAPCard(
+                title: 'ASAP Borrowing',
+                description: 'Find students with the item you need',
+                imagePath: 'images/asap.png',
+                buttonColor: const Color(0xFF2C3E50),
+                onTap: () {},
+              ),
+            ),
+            SizedBox(width: ResponsiveUtils.getResponsiveGridSpacing(screenWidth)),
+            // Help a Peer ASAP Card
+            Expanded(
+              child: _buildASAPCard(
+                title: 'Help a Peer ASAP',
+                description: 'Respond to nearby borrowing requests',
+                imagePath: 'images/help.png',
+                buttonColor: const Color(0xFFFF6B4A),
+                onTap: () {},
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildASAPCard({
+    required String title,
+    required String description,
+    required String imagePath,
+    required Color buttonColor,
+    required VoidCallback onTap,
+  }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    return Container(
+      padding: EdgeInsets.all(ResponsiveUtils.getResponsiveValue(16, screenWidth)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 56,
+            height: 56,
+            child: Center(
+              child: Image.asset(
+                imagePath,
+                width: 56,
+                height: 56,
+              ),
+            ),
+          ),
+          SizedBox(height: ResponsiveUtils.getResponsiveValue(12, screenWidth)),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: ResponsiveUtils.getResponsiveFontSize(14, screenWidth, minSize: 12, maxSize: 16),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: ResponsiveUtils.getResponsiveValue(6, screenWidth)),
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: ResponsiveUtils.getResponsiveFontSize(11, screenWidth, minSize: 9, maxSize: 13),
+              height: 1.3,
+            ),
+          ),
+          SizedBox(height: ResponsiveUtils.getResponsiveValue(12, screenWidth)),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onTap,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: buttonColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: EdgeInsets.symmetric(
+                  vertical: ResponsiveUtils.getResponsiveValue(10, screenWidth),
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                'Start Scanning',
+                style: TextStyle(
+                  fontSize: ResponsiveUtils.getResponsiveFontSize(12, screenWidth, minSize: 10, maxSize: 14),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

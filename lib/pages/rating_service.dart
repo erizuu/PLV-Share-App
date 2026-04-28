@@ -134,13 +134,9 @@ class RatingService {
         // Get the ratings map
         Map<String, dynamic> ratingsMap = ratingData['ratingsMap'] ?? {};
 
-        // CHECK: Has this user already rated?
-        if (ratingsMap.containsKey(currentUserId)) {
-          print('❌ USER ALREADY RATED - Cannot duplicate');
-          throw Exception('already_rated');
-        }
-
-        // Create new review
+        // CREATE OR UPDATE: Allow both new and existing ratings (upsert)
+        final isUpdating = ratingsMap.containsKey(currentUserId);
+        
         ratingsMap[currentUserId] = {
           'rating': rating,
           'feedback': feedback,
@@ -165,23 +161,33 @@ class RatingService {
           'ratingsMap': ratingsMap,
           'lastUpdated': FieldValue.serverTimestamp(),
         });
+
+        // Also write to userReviews collection for history tracking
+        DocumentReference reviewDocRef = _firestore
+            .collection('userReviews')
+            .doc(currentUserId)
+            .collection('reviews')
+            .doc('${ratedUserId}_$ratingType');
+
+        transaction.set(reviewDocRef, {
+          'ratedUserId': ratedUserId,
+          'ratingType': ratingType,
+          'rating': rating,
+          'feedback': feedback,
+          'ratedUserName': '', // Will be set from rated user's document
+          'timestamp': FieldValue.serverTimestamp(),
+          'transactionId': transactionId.isNotEmpty ? transactionId : '',
+        });
+
+        print(isUpdating ? '✏️ RATING UPDATED SUCCESSFULLY' : '✅ RATING SUBMITTED SUCCESSFULLY');
       });
 
-      print('✅ RATING SUBMITTED SUCCESSFULLY');
       print('═══════════════════════════════════════════════════════════\n');
       return true;
     } on FirebaseException catch (e) {
-      if (e.message?.contains('already_rated') ?? false) {
-        print('❌ Already rated error');
-        return false;
-      }
       print('❌ Firestore Error: ${e.message}');
       return false;
     } catch (e) {
-      if (e.toString().contains('already_rated')) {
-        print('❌ Already rated - user cannot submit duplicate');
-        return false;
-      }
       print('❌ Error: $e');
       return false;
     }

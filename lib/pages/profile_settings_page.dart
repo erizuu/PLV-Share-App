@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
+import 'transaction_history_page.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -16,6 +17,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   Map<String, dynamic>? userData;
   bool isLoading = true;
   String selectedTheme = 'light'; // light, dark, auto
+  bool notificationsEnabled = true;
 
   @override
   void initState() {
@@ -40,6 +42,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         setState(() {
           userData = data;
           selectedTheme = data['themePreference'] ?? 'light';
+          notificationsEnabled = data['notificationsEnabled'] ?? true;
           isLoading = false;
         });
       } else {
@@ -69,6 +72,29 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
       }
     } catch (e) {
       print('Error updating theme: $e');
+    }
+  }
+
+  Future<void> updateNotificationPreference(bool enabled) async {
+    try {
+      await _firestore.collection('users').doc(currentUser!.uid).update({
+        'notificationsEnabled': enabled,
+      });
+
+      setState(() => notificationsEnabled = enabled);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              enabled ? 'Notifications enabled' : 'Notifications disabled',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error updating notification preference: $e');
     }
   }
 
@@ -374,8 +400,140 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 16),
+                          Divider(color: Colors.grey.shade200),
+                          const SizedBox(height: 16),
+                          // Notifications Preference
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Push Notifications',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF2C3E50),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Receive messages & updates',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Switch(
+                                value: notificationsEnabled,
+                                onChanged: updateNotificationPreference,
+                                activeColor: const Color(0xFFFF6B4A),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // History Section
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'HISTORY',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF2C3E50),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(
+                            Icons.shopping_bag,
+                            color: Color(0xFFFF6B4A),
+                          ),
+                          title: const Text('Borrowed Items'),
+                          subtitle: const Text('Items you\'ve borrowed'),
+                          trailing: const Icon(Icons.arrow_forward),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const TransactionHistoryPage(
+                                      historyType: 'borrowed',
+                                    ),
+                              ),
+                            );
+                          },
+                        ),
+                        Divider(height: 1, color: Colors.grey.shade200),
+                        ListTile(
+                          leading: const Icon(
+                            Icons.share,
+                            color: Color(0xFFFF6B4A),
+                          ),
+                          title: const Text('Lended Items'),
+                          subtitle: const Text('Items you\'ve shared'),
+                          trailing: const Icon(Icons.arrow_forward),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const TransactionHistoryPage(
+                                      historyType: 'lended',
+                                    ),
+                              ),
+                            );
+                          },
+                        ),
+                        Divider(height: 1, color: Colors.grey.shade200),
+                        ListTile(
+                          leading: const Icon(
+                            Icons.rate_review,
+                            color: Color(0xFFFF6B4A),
+                          ),
+                          title: const Text('My Review History'),
+                          subtitle: const Text(
+                            'Ratings and reviews you\'ve given',
+                          ),
+                          trailing: const Icon(Icons.arrow_forward),
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Review history - Coming soon'),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
                 ],

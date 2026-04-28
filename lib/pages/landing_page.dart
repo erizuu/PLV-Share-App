@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'basic_information_page.dart';
 import 'login_page.dart';
 import 'main_navigation.dart';
+import '../utils/responsive_utils.dart';
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -42,22 +43,25 @@ class _LandingPageState extends State<LandingPage> {
 
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final horizontalPadding = ResponsiveUtils.getResponsiveHorizontalPadding(screenWidth);
+    final logoSize = ResponsiveUtils.getResponsiveImageSize(130, screenWidth, minSize: 100, maxSize: 180);
+    final buttonHeight = ResponsiveUtils.getResponsiveButtonHeight(screenHeight);
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.08),
+            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(height: screenHeight * 0.1),
+                SizedBox(height: screenHeight * 0.08),
 
                 // Logo
                 Container(
-                  width: screenWidth * 0.3,
-                  height: screenWidth * 0.3,
+                  width: logoSize,
+                  height: logoSize,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
                     boxShadow: [
@@ -74,13 +78,13 @@ class _LandingPageState extends State<LandingPage> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                SizedBox(height: ResponsiveUtils.getResponsiveValue(24, screenWidth, minValue: 16, maxValue: 32)),
 
                 // Title
                 Text(
                   'U-Share',
                   style: TextStyle(
-                    fontSize: screenWidth * 0.09,
+                    fontSize: ResponsiveUtils.getResponsiveFontSize(36, screenWidth, minSize: 28, maxSize: 48),
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF2C3E50),
                     letterSpacing: -0.5,
@@ -94,7 +98,7 @@ class _LandingPageState extends State<LandingPage> {
                   'Because learning is better\nwhen we share.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: screenWidth * 0.04,
+                    fontSize: ResponsiveUtils.getResponsiveFontSize(16, screenWidth, minSize: 12, maxSize: 20),
                     color: const Color(0xFF7F8C8D),
                     height: 1.5,
                   ),
@@ -102,37 +106,65 @@ class _LandingPageState extends State<LandingPage> {
 
                 SizedBox(height: screenHeight * 0.06),
 
-                // Action Icons Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Image.asset(
-                      'images/Borrow.png',
-                      width: screenWidth * 0.2,
-                      height: screenHeight * 0.13,
-                    ),
-                    SizedBox(width: screenWidth * 0.02),
-                    Image.asset(
-                      'images/Share.png',
-                      width: screenWidth * 0.3,
-                      height: screenHeight * 0.17,
-                    ),
-                    SizedBox(width: screenWidth * 0.02),
-                    Image.asset(
-                      'images/Lend.png',
-                      width: screenWidth * 0.2,
-                      height: screenHeight * 0.13,
-                    ),
-                  ],
-                ),
+                // Action Icons Row - Responsive for different screen sizes
+                ResponsiveUtils.isTablet(context)
+                    ? Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Image.asset(
+                                'images/Borrow.png',
+                                width: screenWidth * 0.18,
+                                height: screenHeight * 0.12,
+                              ),
+                              SizedBox(width: screenWidth * 0.05),
+                              Image.asset(
+                                'images/Share.png',
+                                width: screenWidth * 0.25,
+                                height: screenHeight * 0.15,
+                              ),
+                              SizedBox(width: screenWidth * 0.05),
+                              Image.asset(
+                                'images/Lend.png',
+                                width: screenWidth * 0.18,
+                                height: screenHeight * 0.12,
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Image.asset(
+                            'images/Borrow.png',
+                            width: screenWidth * 0.2,
+                            height: screenHeight * 0.13,
+                          ),
+                          SizedBox(width: screenWidth * 0.02),
+                          Image.asset(
+                            'images/Share.png',
+                            width: screenWidth * 0.3,
+                            height: screenHeight * 0.17,
+                          ),
+                          SizedBox(width: screenWidth * 0.02),
+                          Image.asset(
+                            'images/Lend.png',
+                            width: screenWidth * 0.2,
+                            height: screenHeight * 0.13,
+                          ),
+                        ],
+                      ),
 
                 SizedBox(height: screenHeight * 0.04),
 
                 // Get Started Button
                 SizedBox(
                   width: double.infinity,
-                  height: screenHeight * 0.07,
+                  height: buttonHeight,
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.push(
@@ -156,12 +188,12 @@ class _LandingPageState extends State<LandingPage> {
                         Text(
                           'Get Started',
                           style: TextStyle(
-                            fontSize: screenWidth * 0.045,
+                            fontSize: ResponsiveUtils.getResponsiveFontSize(16, screenWidth, minSize: 14, maxSize: 20),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         SizedBox(width: screenWidth * 0.02),
-                        Icon(Icons.arrow_forward, size: screenWidth * 0.05),
+                        Icon(Icons.arrow_forward, size: ResponsiveUtils.getResponsiveValue(20, screenWidth, minValue: 16, maxValue: 24)),
                       ],
                     ),
                   ),
@@ -176,7 +208,7 @@ class _LandingPageState extends State<LandingPage> {
                     Text(
                       'Already have an account? ',
                       style: TextStyle(
-                        fontSize: screenWidth * 0.035,
+                        fontSize: ResponsiveUtils.getResponsiveFontSize(14, screenWidth, minSize: 11, maxSize: 16),
                         color: const Color(0xFF7F8C8D),
                       ),
                     ),
@@ -192,7 +224,7 @@ class _LandingPageState extends State<LandingPage> {
                       child: Text(
                         'Log in',
                         style: TextStyle(
-                          fontSize: screenWidth * 0.035,
+                          fontSize: ResponsiveUtils.getResponsiveFontSize(14, screenWidth, minSize: 11, maxSize: 16),
                           color: const Color(0xFFFF6B4A),
                           fontWeight: FontWeight.w600,
                         ),

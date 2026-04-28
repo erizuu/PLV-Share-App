@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../pages/chat_service.dart';
 import '../pages/chat_model.dart';
 import 'chat_details_page.dart';
+import '../utils/responsive_utils.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});

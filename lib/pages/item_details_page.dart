@@ -3,7 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/request_service.dart';
 import 'chat_service.dart';
 import 'chat_details_page.dart';
+import 'request_sent_page.dart';
 import 'profile_page.dart';
+import '../utils/responsive_utils.dart';
 
 class ItemDetailsPage extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -49,41 +51,26 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
     });
 
     if (result['success']) {
-      _showMessage('Request sent successfully! Opening chat with lender...');
-
-      // Create or get chat room with lender
-      try {
-        final chatRoomId = await _chatService.getOrCreateChatRoom(
-          otherUserId: widget.item['ownerId'],
-          otherUserName: widget.item['ownerName'],
-          itemId: widget.itemId,
-          itemName: widget.item['itemName'],
-          lenderId: widget.item['ownerId'] ?? '',
-        );
-
-        // Navigate to chat detail page
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatDetailPage(
-                chatRoomId: chatRoomId,
-                otherUserName: widget.item['ownerName'],
-                itemName: widget.item['itemName'],
-              ),
+      // Navigate to request sent page
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RequestSentPage(
+              request: {
+                'itemId': widget.itemId,
+                'itemName': widget.item['itemName'],
+                'ownerId': widget.item['ownerId'],
+                'ownerName': widget.item['ownerName'],
+                'borrowerId': user.uid,
+                'borrowerName': user.displayName ?? 'Unknown',
+                'status': 'pending',
+              },
+              requestId: result['requestId'] ?? '',
+              lenderName: widget.item['ownerName'],
             ),
-          );
-        }
-      } catch (e) {
-        print('Error creating chat room: $e');
-        _showMessage(
-          'Chat created! You can message the lender from your Messages tab.',
+          ),
         );
-        Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            Navigator.pop(context);
-          }
-        });
       }
     } else {
       _showMessage(result['message']);
@@ -172,6 +159,32 @@ class _ItemDetailsPageState extends State<ItemDetailsPage> {
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0xFFFF6B4A),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Rental Pricing Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4ADE80).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      widget.item['rentalType'] == 'paid'
+                          ? '\$${widget.item['rentalPrice']?.toStringAsFixed(2) ?? '0.00'}/rental'
+                          : 'Free',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: widget.item['rentalType'] == 'paid'
+                            ? const Color(0xFF4ADE80)
+                            : Colors.green,
                         fontWeight: FontWeight.w600,
                       ),
                     ),

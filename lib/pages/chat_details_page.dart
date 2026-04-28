@@ -4,7 +4,11 @@ import 'dart:async';
 import '../pages/chat_service.dart';
 import '../pages/chat_model.dart';
 import '../pages/profile_page.dart';
+import '../pages/rating_dialog.dart';
+import '../pages/rating_service.dart';
+import '../pages/request_service.dart';
 import 'package:intl/intl.dart';
+import '../utils/responsive_utils.dart';
 
 class ChatDetailPage extends StatefulWidget {
   final String chatRoomId;
@@ -26,10 +30,13 @@ class ChatDetailPage extends StatefulWidget {
 
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final ChatService _chatService = ChatService();
+  final RatingService _ratingService = RatingService();
+  final RequestService _requestService = RequestService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final User? _currentUser = FirebaseAuth.instance.currentUser;
   bool _hasAgreedToMeet = false;
+  bool _ratingDialogShown = false;
   final ValueNotifier<DateTime> _timerNotifier = ValueNotifier(DateTime.now());
   late Timer _timerUpdateTimer;
 
@@ -48,6 +55,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     });
     // Check if transaction has ended
     _checkAndUpdateTransactionStatus();
+    // Check if should show rating dialog
+    _checkAndShowRatingDialog();
   }
 
   Future<void> _checkAndUpdateTransactionStatus() async {
@@ -60,6 +69,110 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     } catch (e) {
       print('Error checking transaction status: $e');
     }
+  }
+
+  Future<void> _checkAndShowRatingDialog() async {
+    try {
+      // Only show rating dialog once per session
+      if (_ratingDialogShown) return;
+
+      // Check if should show rating dialog
+      bool shouldShow = await _chatService.shouldShowRatingPopup(
+        widget.chatRoomId,
+      );
+      if (!shouldShow) return;
+
+      // Get other user ID
+      String? otherUserId = await _chatService.getOtherUserId(
+        widget.chatRoomId,
+      );
+      if (otherUserId == null) return;
+
+      // Get current user's rating type (lender or borrower)
+      String? ratingType = await _chatService.getRatingTypeForCurrentUser(
+        widget.chatRoomId,
+      );
+      if (ratingType == null) return;
+
+      // Delay to let the UI build first
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (mounted && !_ratingDialogShown) {
+        _ratingDialogShown = true;
+
+        // Show rating dialog with option to skip
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text(
+                'Rate Your Transaction',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+              content: const Text(
+                'Your transaction is complete! Would you like to rate your experience with this user?',
+                style: TextStyle(fontSize: 14),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // Mark as shown and don't show again
+                    _chatService.markRatingShownToUser(widget.chatRoomId);
+                  },
+                  child: const Text('Skip'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // Show rating dialog
+                    _showRatingDialog(
+                      otherUserId,
+                      widget.otherUserName,
+                      ratingType,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6B4A),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Rate Now'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      print('Error checking rating dialog: $e');
+    }
+  }
+
+  void _showRatingDialog(
+    String ratedUserId,
+    String ratedUserName,
+    String ratingType,
+  ) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return RatingDialog(
+          ratedUserId: ratedUserId,
+          ratedUserName: ratedUserName,
+          ratingType: ratingType,
+          transactionId: '',
+        );
+      },
+    ).then((result) {
+      // Mark rating as shown to prevent showing again
+      _chatService.markRatingShownToUser(widget.chatRoomId);
+    });
   }
 
   @override
@@ -144,17 +257,34 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 
   void _showSetDurationDialog() async {
-    // Security check: only borrower can set duration
+    // Security check: only lender can set duration
     final chatRoom = await _chatService.getChatRoom(widget.chatRoomId);
-    if (chatRoom?.lenderId == _currentUser?.uid) {
+    if (chatRoom?.lenderId != _currentUser?.uid) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Only the borrower can set the return duration'),
+          content: Text('Only the lender can set the return duration'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 3),
         ),
       );
       return;
+    }
+
+    // Check if request has been accepted
+    if (chatRoom?.transactionId != null) {
+      final requestStatus = await _requestService.getRequestStatus(
+        chatRoom!.transactionId!,
+      );
+      if (requestStatus != 'accepted') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot set duration until the request is accepted'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
     }
 
     DateTime? selectedDate = DateTime.now().add(const Duration(days: 1));
@@ -805,15 +935,99 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                // Duration button - only visible for borrower
+                // Show accept/decline buttons if request is pending
                 StreamBuilder<ChatRoom?>(
                   stream: _chatService.watchChatRoom(widget.chatRoomId),
                   builder: (context, roomSnapshot) {
                     final chatRoom = roomSnapshot.data;
-                    final isBorrower = chatRoom?.lenderId != _currentUser?.uid;
+                    final isLender = chatRoom?.lenderId == _currentUser?.uid;
 
-                    if (!isBorrower) {
-                      // Show informational message to lender
+                    if (!isLender || chatRoom?.transactionId == null) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return FutureBuilder<String?>(
+                      future: _requestService.getRequestStatus(
+                        chatRoom!.transactionId!,
+                      ),
+                      builder: (context, statusSnapshot) {
+                        final status = statusSnapshot.data;
+                        if (status != 'pending') {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  await _requestService.acceptRequest(
+                                    chatRoom.transactionId!,
+                                  );
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Request accepted! ✅'),
+                                        backgroundColor: Colors.green,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.check, size: 18),
+                                label: const Text('Accept'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  await _requestService.declineRequest(
+                                    chatRoom.transactionId!,
+                                  );
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Request declined'),
+                                        backgroundColor: Colors.red,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                                icon: const Icon(Icons.close, size: 18),
+                                label: const Text('Decline'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red,
+                                  side: const BorderSide(
+                                    color: Colors.red,
+                                    width: 1.5,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                // Duration button - only visible for lender
+                StreamBuilder<ChatRoom?>(
+                  stream: _chatService.watchChatRoom(widget.chatRoomId),
+                  builder: (context, roomSnapshot) {
+                    final chatRoom = roomSnapshot.data;
+                    final isLender = chatRoom?.lenderId == _currentUser?.uid;
+
+                    if (!isLender) {
+                      // Show informational message to borrower
                       return Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),

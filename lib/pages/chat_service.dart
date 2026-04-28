@@ -158,6 +158,109 @@ class ChatService {
       'lastMessage': message,
       'lastMessageTime': FieldValue.serverTimestamp(),
     });
+
+    // Send push notification to other participants if notifications are enabled
+    if (!isSystemMessage) {
+      await _sendMessageNotification(
+        chatRoomId: chatRoomId,
+        senderName: currentUserName,
+        message: message,
+        senderId: currentUserId,
+      );
+    }
+  }
+
+  // Helper method to send message notification
+  Future<void> _sendMessageNotification({
+    required String chatRoomId,
+    required String senderName,
+    required String message,
+    required String senderId,
+  }) async {
+    try {
+      DocumentSnapshot chatRoomDoc = await _firestore
+          .collection('chatRooms')
+          .doc(chatRoomId)
+          .get();
+
+      if (!chatRoomDoc.exists) return;
+
+      Map<String, dynamic> chatRoomData =
+          chatRoomDoc.data() as Map<String, dynamic>;
+      List<String> participants = List<String>.from(
+        chatRoomData['participants'] ?? [],
+      );
+      String itemName = chatRoomData['itemName'] ?? 'Item';
+
+      // Send notification to each participant except the sender
+      for (String userId in participants) {
+        if (userId == senderId) continue; // Don't notify the sender
+
+        DocumentSnapshot userDoc = await _firestore
+            .collection('users')
+            .doc(userId)
+            .get();
+
+        if (userDoc.exists) {
+          Map<String, dynamic> userData =
+              userDoc.data() as Map<String, dynamic>;
+
+          // Check if user has notifications enabled
+          bool notificationsEnabled = userData['notificationsEnabled'] ?? true;
+
+          if (notificationsEnabled) {
+            String? fcmToken = userData['fcmToken'] as String?;
+
+            if (fcmToken != null) {
+              // In a real implementation, you would call a Cloud Function
+              // to send FCM notifications. This prepares the data for that.
+              print(
+                'Sending message notification to $userId: $senderName sent a message',
+              );
+
+              // Store notification data in database for Cloud Function to process
+              await _storeNotificationForDelivery(
+                userId: userId,
+                fcmToken: fcmToken,
+                title: '$senderName - $itemName',
+                body: message.length > 50
+                    ? '${message.substring(0, 50)}...'
+                    : message,
+                chatRoomId: chatRoomId,
+                type: 'message',
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error sending message notification: $e');
+    }
+  }
+
+  // Store notification in database for Cloud Function to send via FCM
+  Future<void> _storeNotificationForDelivery({
+    required String userId,
+    required String fcmToken,
+    required String title,
+    required String body,
+    required String chatRoomId,
+    required String type,
+  }) async {
+    try {
+      await _firestore.collection('notifications').add({
+        'userId': userId,
+        'fcmToken': fcmToken,
+        'title': title,
+        'body': body,
+        'chatRoomId': chatRoomId,
+        'type': type,
+        'createdAt': FieldValue.serverTimestamp(),
+        'sent': false,
+      });
+    } catch (e) {
+      print('Error storing notification: $e');
+    }
   }
 
   // Get messages stream for a chat room
@@ -637,6 +740,166 @@ class ChatService {
       }
     } catch (e) {
       print('Error checking if both parties finished: $e');
+    }
+  }
+
+  // Get the other user ID in the chat room
+  Future<String?> getOtherUserId(String chatRoomId) async {
+    try {
+      String currentUserId = _auth.currentUser!.uid;
+
+      DocumentSnapshot chatRoomDoc = await _firestore
+          .collection('chatRooms')
+          .doc(chatRoomId)
+          .get();
+
+      if (!chatRoomDoc.exists) return null;
+
+      Map<String, dynamic> chatRoomData =
+          chatRoomDoc.data() as Map<String, dynamic>;
+      List<String> participants = List<String>.from(
+        chatRoomData['participants'] ?? [],
+      );
+
+      // Find the other user
+      for (String participant in participants) {
+        if (participant != currentUserId) {
+          return participant;
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('Error getting other user ID: $e');
+      return null;
+    }
+  }
+
+  // Check if both parties have finished the transaction
+  Future<bool> checkIfBothPartiesFinished(String chatRoomId) async {
+    try {
+      DocumentSnapshot chatRoomDoc = await _firestore
+          .collection('chatRooms')
+          .doc(chatRoomId)
+          .get();
+
+      if (!chatRoomDoc.exists) return false;
+
+      Map<String, dynamic> chatRoomData =
+          chatRoomDoc.data() as Map<String, dynamic>;
+      List<String> finishedBy = List<String>.from(
+        chatRoomData['finishedBy'] ?? [],
+      );
+      List<String> participants = List<String>.from(
+        chatRoomData['participants'] ?? [],
+      );
+
+      // Both parties finished if finishedBy contains both participants
+      return finishedBy.length == 2 && participants.length == 2;
+    } catch (e) {
+      print('Error checking if both parties finished: $e');
+      return false;
+    }
+  }
+
+  // Get current user's role in the transaction (lender or borrower)
+  Future<String?> getRatingTypeForCurrentUser(String chatRoomId) async {
+    try {
+      String currentUserId = _auth.currentUser!.uid;
+
+      DocumentSnapshot chatRoomDoc = await _firestore
+          .collection('chatRooms')
+          .doc(chatRoomId)
+          .get();
+
+      if (!chatRoomDoc.exists) return null;
+
+      Map<String, dynamic> chatRoomData =
+          chatRoomDoc.data() as Map<String, dynamic>;
+      String lenderId = chatRoomData['lenderId'] ?? '';
+
+      // If current user is the lender, they rate as a borrower
+      // If current user is not the lender, they rate as a lender
+      if (currentUserId == lenderId) {
+        return 'borrower'; // Lender rates the borrower
+      } else {
+        return 'lender'; // Borrower rates the lender
+      }
+    } catch (e) {
+      print('Error getting rating type: $e');
+      return null;
+    }
+  }
+
+  // Check if rating popup should be shown to current user
+  Future<bool> shouldShowRatingPopup(String chatRoomId) async {
+    try {
+      String currentUserId = _auth.currentUser!.uid;
+
+      DocumentSnapshot chatRoomDoc = await _firestore
+          .collection('chatRooms')
+          .doc(chatRoomId)
+          .get();
+
+      if (!chatRoomDoc.exists) return false;
+
+      Map<String, dynamic> chatRoomData =
+          chatRoomDoc.data() as Map<String, dynamic>;
+
+      // Check if both parties have finished
+      List<String> finishedBy = List<String>.from(
+        chatRoomData['finishedBy'] ?? [],
+      );
+      List<String> participants = List<String>.from(
+        chatRoomData['participants'] ?? [],
+      );
+
+      bool bothFinished = finishedBy.length == 2 && participants.length == 2;
+      if (!bothFinished) return false;
+
+      // Check if there's a record of showing rating to this user
+      List<String> ratingShownTo = List<String>.from(
+        chatRoomData['ratingShownTo'] ?? [],
+      );
+
+      // If we've already shown rating to this user, don't show again
+      if (ratingShownTo.contains(currentUserId)) return false;
+
+      return true;
+    } catch (e) {
+      print('Error checking if should show rating popup: $e');
+      return false;
+    }
+  }
+
+  // Mark that rating popup has been shown to current user
+  Future<void> markRatingShownToUser(String chatRoomId) async {
+    try {
+      String currentUserId = _auth.currentUser!.uid;
+
+      DocumentSnapshot chatRoomDoc = await _firestore
+          .collection('chatRooms')
+          .doc(chatRoomId)
+          .get();
+
+      if (!chatRoomDoc.exists) return;
+
+      Map<String, dynamic> chatRoomData =
+          chatRoomDoc.data() as Map<String, dynamic>;
+      List<String> ratingShownTo = List<String>.from(
+        chatRoomData['ratingShownTo'] ?? [],
+      );
+
+      // Add current user if not already there
+      if (!ratingShownTo.contains(currentUserId)) {
+        ratingShownTo.add(currentUserId);
+
+        await _firestore.collection('chatRooms').doc(chatRoomId).update({
+          'ratingShownTo': ratingShownTo,
+        });
+      }
+    } catch (e) {
+      print('Error marking rating shown: $e');
     }
   }
 }

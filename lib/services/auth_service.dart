@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -196,6 +197,50 @@ class AuthService {
     } catch (e) {
       print('Error checking tutorial status: $e');
       return true; // Default to true on error to avoid blocking
+    }
+  }
+
+  // Request notification permissions
+  Future<void> requestNotificationPermissions() async {
+    try {
+      final FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+      // Request notification permissions
+      NotificationSettings settings = await messaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        print('✅ User granted notification permission');
+      } else if (settings.authorizationStatus ==
+          AuthorizationStatus.provisional) {
+        print('⚠️ User granted provisional notification permission');
+      } else {
+        print('❌ User declined notification permission');
+      }
+
+      // Get the FCM token for this device
+      String? token = await messaging.getToken();
+      print('📱 FCM Token: $token');
+
+      // Store token in user document
+      if (_auth.currentUser != null && token != null) {
+        await _firestore
+            .collection('users')
+            .doc(_auth.currentUser!.uid)
+            .update({'fcmToken': token})
+            .catchError((e) {
+              print('Error updating FCM token: $e');
+            });
+      }
+    } catch (e) {
+      print('Error requesting notification permissions: $e');
     }
   }
 }

@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 import '../services/request_service.dart';
 import 'chat_service.dart';
 import 'chat_details_page.dart';
+import 'transaction_details_page.dart';
 import 'profile_page.dart';
+import '../utils/responsive_utils.dart';
 
 class RequestPage extends StatefulWidget {
   const RequestPage({super.key});
@@ -466,36 +468,17 @@ class _RequestPageState extends State<RequestPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () async {
-                  // Navigate to chat with borrower
-                  DateTime? transactionEndDate;
-                  if (request['transactionEndDate'] != null) {
-                    transactionEndDate =
-                        (request['transactionEndDate'] as Timestamp).toDate();
-                  }
-
-                  final chatRoomId = await _chatService.getOrCreateChatRoom(
-                    otherUserId: request['borrowerId'] ?? '',
-                    otherUserName: request['borrowerName'] ?? 'Unknown',
-                    itemId: request['itemId'] ?? '',
-                    itemName: request['itemName'] ?? 'Unknown Item',
-                    lenderId: _auth.currentUser!.uid,
-                    transactionEndDate: transactionEndDate,
-                  );
-
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatDetailPage(
-                          chatRoomId: chatRoomId,
-                          otherUserName: request['borrowerName'] ?? 'Unknown',
-                          itemName: request['itemName'] ?? 'Unknown Item',
-                          otherUserId: request['borrowerId'],
-                        ),
+                onPressed: () {
+                  // Navigate to transaction details
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TransactionDetailsPage(
+                        request: request,
+                        requestId: requestId,
                       ),
-                    );
-                  }
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2C3E50),
@@ -505,93 +488,35 @@ class _RequestPageState extends State<RequestPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text('Start Chat'),
+                child: const Text('View Details'),
               ),
             )
           else if (status == 'pending')
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      final result = await _requestService.declineRequest(
-                        requestId,
-                      );
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(result['message'])),
-                        );
-                      }
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.grey.shade700,
-                      side: BorderSide(color: Colors.grey.shade300),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Navigate to transaction details where Accept/Reject will be handled
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TransactionDetailsPage(
+                        request: request,
+                        requestId: requestId,
                       ),
                     ),
-                    child: const Text('Decline'),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2C3E50),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      // Accept request without showing duration picker
-                      final result = await _requestService.acceptRequest(
-                        requestId,
-                        request['itemId'] ?? '',
-                      );
-
-                      if (!mounted) return;
-
-                      if (result['success']) {
-                        // Navigate to chat directly
-                        final chatRoomId = await _chatService
-                            .getOrCreateChatRoom(
-                              otherUserId: request['borrowerId'] ?? '',
-                              otherUserName:
-                                  request['borrowerName'] ?? 'Unknown',
-                              itemId: request['itemId'] ?? '',
-                              itemName: request['itemName'] ?? 'Unknown Item',
-                              lenderId: _auth.currentUser!.uid,
-                            );
-
-                        if (mounted) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChatDetailPage(
-                                chatRoomId: chatRoomId,
-                                otherUserName:
-                                    request['borrowerName'] ?? 'Unknown',
-                                itemName: request['itemName'] ?? 'Unknown Item',
-                                otherUserId: request['borrowerId'],
-                              ),
-                            ),
-                          );
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(result['message']),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6B4A),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Accept'),
-                  ),
-                ),
-              ],
+                child: const Text('View Item'),
+              ),
             ),
         ],
       ),
@@ -828,36 +753,17 @@ class _RequestPageState extends State<RequestPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () async {
-                  // Navigate to chat with lender
-                  DateTime? transactionEndDate;
-                  if (request['transactionEndDate'] != null) {
-                    transactionEndDate =
-                        (request['transactionEndDate'] as Timestamp).toDate();
-                  }
-
-                  final chatRoomId = await _chatService.getOrCreateChatRoom(
-                    otherUserId: request['ownerId'] ?? '',
-                    otherUserName: request['ownerName'] ?? 'Unknown',
-                    itemId: request['itemId'] ?? '',
-                    itemName: request['itemName'] ?? 'Unknown Item',
-                    lenderId: request['ownerId'] ?? '',
-                    transactionEndDate: transactionEndDate,
-                  );
-
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatDetailPage(
-                          chatRoomId: chatRoomId,
-                          otherUserName: request['ownerName'] ?? 'Unknown',
-                          itemName: request['itemName'] ?? 'Unknown Item',
-                          otherUserId: request['ownerId'],
-                        ),
+                onPressed: () {
+                  // Navigate to transaction details
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TransactionDetailsPage(
+                        request: request,
+                        requestId: requestId,
                       ),
-                    );
-                  }
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2C3E50),
@@ -867,31 +773,89 @@ class _RequestPageState extends State<RequestPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text('Start Chat'),
+                child: const Text('View Item'),
               ),
             ),
           ] else if (status == 'pending') ...[
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () async {
-                  final result = await _requestService.cancelRequest(requestId);
-                  if (mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(result['message'])));
-                  }
-                },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.grey.shade700,
-                  side: BorderSide(color: Colors.grey.shade300),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // Navigate to transaction details
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TransactionDetailsPage(
+                            request: request,
+                            requestId: requestId,
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2C3E50),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('View Item'),
                   ),
                 ),
-                child: const Text('Cancel Request'),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      // Show confirmation dialog
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Cancel Request'),
+                          content: const Text(
+                            'Are you sure you want to cancel this request?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Keep Request'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () async {
+                                Navigator.pop(context);
+                                final result = await _requestService
+                                    .cancelRequest(
+                                      requestId,
+                                      itemId: request['itemId'],
+                                    );
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(result['message'])),
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red.shade400,
+                              ),
+                              child: const Text('Cancel Request'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade400,
+                      side: BorderSide(color: Colors.red.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+              ],
             ),
           ],
         ],

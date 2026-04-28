@@ -4,6 +4,7 @@ import 'home_page.dart';
 import 'profile_page.dart' as profile;
 import 'chat_list_page.dart';
 import 'request_page.dart';
+import '../utils/responsive_utils.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});

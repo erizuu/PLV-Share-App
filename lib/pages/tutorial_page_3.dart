@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
 import '../services/auth_service.dart';
+import '../utils/responsive_utils.dart';
 
 class TutorialPage3 extends StatefulWidget {
   const TutorialPage3({super.key});

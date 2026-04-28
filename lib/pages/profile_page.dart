@@ -5,6 +5,7 @@ import 'login_page.dart';
 import 'profile_settings_page.dart';
 import 'rating_service.dart';
 import 'rating_dialog.dart';
+import '../utils/responsive_utils.dart';
 
 class ProfilePage extends StatefulWidget {
   final String? userId; // If null, shows current user's profile
@@ -319,31 +320,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
                           // Settings Button (only for own profile)
                           if (isOwnProfile)
-                            PopupMenuButton(
+                            IconButton(
                               icon: const Icon(
-                                Icons.more_vert,
+                                Icons.settings,
                                 color: Colors.white,
                               ),
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  child: const Row(
-                                    children: [
-                                      Icon(Icons.settings, size: 20),
-                                      SizedBox(width: 8),
-                                      Text('Settings'),
-                                    ],
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ProfileSettingsPage(),
                                   ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ProfileSettingsPage(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
+                                );
+                              },
                             )
                           else
                             const SizedBox(width: 48),
@@ -935,47 +925,8 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                       );
                     } else {
-                      // Show rate button
-                      return Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: screenWidth * 0.05,
-                          vertical: screenHeight * 0.02,
-                        ),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              final String ratingTypeToUse =
-                                  widget.ratingType ?? 'borrower';
-                              final String transactionIdToUse =
-                                  widget.transactionId ?? '';
-
-                              showDialog(
-                                context: context,
-                                builder: (context) => RatingDialog(
-                                  ratedUserId: userId,
-                                  ratedUserName:
-                                      widget.userName ?? getFullName(),
-                                  ratingType: ratingTypeToUse,
-                                  transactionId: transactionIdToUse,
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.star, color: Colors.white),
-                            label: Text(
-                              'Rate as ${widget.ratingType == 'lender' ? 'Lender' : 'Borrower'}',
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF6B4A),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
+                      // Ratings only happen in chat after transaction completion
+                      return const SizedBox.shrink();
                     }
                   },
                 ),

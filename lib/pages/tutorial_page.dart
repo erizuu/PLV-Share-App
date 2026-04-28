@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'tutorial_page_2.dart';
 import 'main_navigation.dart';
 import '../services/auth_service.dart';
+import '../utils/responsive_utils.dart';
 
 class TutorialPage extends StatefulWidget {
   const TutorialPage({super.key});

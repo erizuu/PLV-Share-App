@@ -62,11 +62,12 @@ class RequestService {
         .snapshots();
   }
 
-  // Get requests made by borrower (outgoing requests)
+  // Get requests made by borrower (outgoing requests) - excluding cancelled and completed
   Stream<QuerySnapshot> getOutgoingRequests(String borrowerId) {
     return _firestore
         .collection('requests')
         .where('borrowerId', isEqualTo: borrowerId)
+        .where('status', whereIn: ['pending', 'accepted'])
         .snapshots();
   }
 
@@ -118,13 +119,36 @@ class RequestService {
     }
   }
 
-  // Cancel a request (borrower cancels their own request)
-  Future<Map<String, dynamic>> cancelRequest(String requestId) async {
+  // Cancel a request (borrower cancels their own request) - also revert item to available
+  Future<Map<String, dynamic>> cancelRequest(
+    String requestId, {
+    String? itemId,
+  }) async {
     try {
       await _firestore.collection('requests').doc(requestId).update({
         'status': 'cancelled',
+        'cancelledAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // If an itemId is provided and the request was pending, revert item to available
+      if (itemId != null) {
+        final requestDoc = await _firestore
+            .collection('requests')
+            .doc(requestId)
+            .get();
+        if (requestDoc.exists) {
+          final requestData = requestDoc.data() as Map<String, dynamic>;
+          final status = requestData['status'] ?? 'cancelled';
+          // Only revert if it was accepted (item is borrowed)
+          if (status == 'accepted') {
+            await _firestore.collection('items').doc(itemId).update({
+              'status': 'available',
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+          }
+        }
+      }
 
       return {'success': true, 'message': 'Request cancelled'};
     } catch (e) {

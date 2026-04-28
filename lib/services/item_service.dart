@@ -12,6 +12,8 @@ class ItemService {
     required String description,
     required String timeline,
     String? imageUrl,
+    String rentalType = 'free', // 'free' or 'paid'
+    double rentalPrice = 0.0, // Only used if rentalType is 'paid'
   }) async {
     try {
       final user = _auth.currentUser;
@@ -34,6 +36,8 @@ class ItemService {
         'ownerSchoolId': userData?['schoolId'] ?? '',
         'status': 'available', // available, borrowed, unavailable
         'isActive': true,
+        'rentalType': rentalType, // 'free' or 'paid'
+        'rentalPrice': rentalType == 'paid' ? rentalPrice : 0.0,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
         'borrowCount': 0,

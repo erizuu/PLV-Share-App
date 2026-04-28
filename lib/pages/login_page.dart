@@ -3,6 +3,7 @@ import 'basic_information_page.dart';
 import 'tutorial_page.dart';
 import 'main_navigation.dart';
 import '../services/auth_service.dart';
+import '../utils/responsive_utils.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -50,6 +51,9 @@ class _LoginPageState extends State<LoginPage> {
 
       if (result['success']) {
         if (mounted) {
+          // Request notification permissions after successful login
+          await _authService.requestNotificationPermissions();
+
           // Check if user has seen tutorial
           bool seenTutorial = await _authService.hasSeenTutorial();
 
@@ -78,13 +82,25 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final horizontalPadding = ResponsiveUtils.getResponsiveHorizontalPadding(
+      screenWidth,
+    );
+    final logoSize = ResponsiveUtils.getResponsiveImageSize(
+      110,
+      screenWidth,
+      minSize: 80,
+      maxSize: 160,
+    );
+    final buttonHeight = ResponsiveUtils.getResponsiveButtonHeight(
+      screenHeight,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: EdgeInsets.all(screenWidth * 0.08),
+            padding: EdgeInsets.all(horizontalPadding),
             child: Form(
               key: _formKey,
               child: Column(
@@ -94,8 +110,8 @@ class _LoginPageState extends State<LoginPage> {
 
                   // Logo
                   Container(
-                    width: screenWidth * 0.25,
-                    height: screenWidth * 0.25,
+                    width: logoSize,
+                    height: logoSize,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
@@ -118,7 +134,12 @@ class _LoginPageState extends State<LoginPage> {
                   Text(
                     'U-Share',
                     style: TextStyle(
-                      fontSize: screenWidth * 0.08,
+                      fontSize: ResponsiveUtils.getResponsiveFontSize(
+                        32,
+                        screenWidth,
+                        minSize: 24,
+                        maxSize: 44,
+                      ),
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFF2C3E50),
                       letterSpacing: -0.5,
@@ -132,7 +153,12 @@ class _LoginPageState extends State<LoginPage> {
                     'Because learning is better when we share.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: screenWidth * 0.035,
+                      fontSize: ResponsiveUtils.getResponsiveFontSize(
+                        14,
+                        screenWidth,
+                        minSize: 11,
+                        maxSize: 18,
+                      ),
                       color: const Color(0xFF7F8C8D),
                     ),
                   ),
@@ -146,7 +172,12 @@ class _LoginPageState extends State<LoginPage> {
                       Text(
                         'Email',
                         style: TextStyle(
-                          fontSize: screenWidth * 0.035,
+                          fontSize: ResponsiveUtils.getResponsiveFontSize(
+                            14,
+                            screenWidth,
+                            minSize: 12,
+                            maxSize: 16,
+                          ),
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF2C3E50),
                         ),
@@ -183,7 +214,12 @@ class _LoginPageState extends State<LoginPage> {
                       Text(
                         'Password',
                         style: TextStyle(
-                          fontSize: screenWidth * 0.035,
+                          fontSize: ResponsiveUtils.getResponsiveFontSize(
+                            14,
+                            screenWidth,
+                            minSize: 12,
+                            maxSize: 16,
+                          ),
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF2C3E50),
                         ),
@@ -241,8 +277,13 @@ class _LoginPageState extends State<LoginPage> {
                       child: Text(
                         'Forgot Password?',
                         style: TextStyle(
-                          fontSize: screenWidth * 0.035,
-                          color: Color(0xFFFF6B4A),
+                          fontSize: ResponsiveUtils.getResponsiveFontSize(
+                            14,
+                            screenWidth,
+                            minSize: 12,
+                            maxSize: 16,
+                          ),
+                          color: const Color(0xFFFF6B4A),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -254,7 +295,7 @@ class _LoginPageState extends State<LoginPage> {
                   // Log In Button
                   SizedBox(
                     width: double.infinity,
-                    height: screenHeight * 0.07,
+                    height: buttonHeight,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _handleLogin,
                       style: ElevatedButton.styleFrom(
@@ -277,7 +318,12 @@ class _LoginPageState extends State<LoginPage> {
                           : Text(
                               'Log In',
                               style: TextStyle(
-                                fontSize: screenWidth * 0.045,
+                                fontSize: ResponsiveUtils.getResponsiveFontSize(
+                                  16,
+                                  screenWidth,
+                                  minSize: 14,
+                                  maxSize: 20,
+                                ),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -293,7 +339,12 @@ class _LoginPageState extends State<LoginPage> {
                       Text(
                         'Don\'t have an account? ',
                         style: TextStyle(
-                          fontSize: screenWidth * 0.035,
+                          fontSize: ResponsiveUtils.getResponsiveFontSize(
+                            14,
+                            screenWidth,
+                            minSize: 12,
+                            maxSize: 16,
+                          ),
                           color: const Color(0xFF7F8C8D),
                         ),
                       ),
@@ -310,8 +361,13 @@ class _LoginPageState extends State<LoginPage> {
                         child: Text(
                           'Sign Up',
                           style: TextStyle(
-                            fontSize: screenWidth * 0.035,
-                            color: Color(0xFF2C3E50),
+                            fontSize: ResponsiveUtils.getResponsiveFontSize(
+                              14,
+                              screenWidth,
+                              minSize: 12,
+                              maxSize: 16,
+                            ),
+                            color: const Color(0xFF2C3E50),
                             fontWeight: FontWeight.w600,
                           ),
                         ),

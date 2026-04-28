@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:io';
 import '../services/item_service.dart';
 import '../services/image_service.dart';
+import '../utils/responsive_utils.dart';
 
 class PostItemPage extends StatefulWidget {
   const PostItemPage({super.key});
@@ -14,10 +15,12 @@ class PostItemPage extends StatefulWidget {
 class _PostItemPageState extends State<PostItemPage> {
   final _itemNameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _priceController = TextEditingController();
   final _itemService = ItemService();
   final _imageService = ImageService();
   String? _selectedCategory;
   String? _selectedTimeline = 'Today';
+  String _rentalType = 'free'; // 'free' or 'paid'
   bool _isLoading = false;
   PlatformFile? _selectedImage;
 
@@ -25,6 +28,7 @@ class _PostItemPageState extends State<PostItemPage> {
   void dispose() {
     _itemNameController.dispose();
     _descriptionController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
@@ -62,7 +66,26 @@ class _PostItemPageState extends State<PostItemPage> {
       return;
     }
 
+    // Validate pricing if paid option is selected
+    if (_rentalType == 'paid') {
+      if (_priceController.text.trim().isEmpty) {
+        _showError('Please enter rental price');
+        return;
+      }
+      double? price = double.tryParse(_priceController.text.trim());
+      if (price == null || price <= 0) {
+        _showError('Please enter a valid price');
+        return;
+      }
+    }
+
     setState(() => _isLoading = true);
+
+    // Parse rental price
+    double rentalPrice = 0.0;
+    if (_rentalType == 'paid') {
+      rentalPrice = double.parse(_priceController.text.trim());
+    }
 
     // First, create the item without image
     final itemResult = await _itemService.addItem(
@@ -70,6 +93,8 @@ class _PostItemPageState extends State<PostItemPage> {
       category: _selectedCategory!,
       description: _descriptionController.text.trim(),
       timeline: _selectedTimeline ?? 'Today',
+      rentalType: _rentalType,
+      rentalPrice: rentalPrice,
     );
 
     if (!itemResult['success']) {
@@ -353,7 +378,98 @@ class _PostItemPageState extends State<PostItemPage> {
 
                     SizedBox(height: screenHeight * 0.025),
 
-                    // Description
+                    // Rental Pricing
+                    Text(
+                      'Rental Pricing',
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.04,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2C3E50),
+                      ),
+                    ),
+                    SizedBox(height: screenHeight * 0.01),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Column(
+                        children: [
+                          // Free Option
+                          ListTile(
+                            title: const Text('Free'),
+                            subtitle: const Text('No payment required'),
+                            leading: Radio<String>(
+                              value: 'free',
+                              groupValue: _rentalType,
+                              onChanged: (value) {
+                                setState(() {
+                                  _rentalType = value ?? 'free';
+                                });
+                              },
+                              activeColor: const Color(0xFFFF6B4A),
+                            ),
+                          ),
+                          Divider(height: 1, color: Colors.grey.shade300),
+                          // Paid Option
+                          ListTile(
+                            title: const Text('Paid'),
+                            subtitle: const Text('Set a rental price'),
+                            leading: Radio<String>(
+                              value: 'paid',
+                              groupValue: _rentalType,
+                              onChanged: (value) {
+                                setState(() {
+                                  _rentalType = value ?? 'free';
+                                });
+                              },
+                              activeColor: const Color(0xFFFF6B4A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Price Input Field (only show when paid is selected)
+                    if (_rentalType == 'paid') ...[
+                      SizedBox(height: screenHeight * 0.015),
+                      TextField(
+                        controller: _priceController,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Enter rental price (e.g., 50)',
+                          prefixText: '\₱',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: screenWidth * 0.035,
+                          ),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFFFF6B4A),
+                            ),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: screenWidth * 0.04,
+                            vertical: screenHeight * 0.015,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    SizedBox(height: screenHeight * 0.025),
                     Text(
                       'Description',
                       style: TextStyle(

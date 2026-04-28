@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'academic_info_page.dart';
 import 'login_page.dart';
 import '../services/auth_service.dart';
+import '../utils/responsive_utils.dart';
 
 class BasicInformationPage extends StatefulWidget {
   const BasicInformationPage({super.key});
